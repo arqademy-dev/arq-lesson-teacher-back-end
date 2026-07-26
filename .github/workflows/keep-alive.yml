@@ -1,0 +1,13 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch: {}        # lets you trigger it manually too
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl -sf https://arq-lesson-teacher-back-end.onrender.com/health || echo "Ping failed, but not blocking"
