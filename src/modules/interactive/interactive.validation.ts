@@ -7,7 +7,9 @@ export const createInteractiveElementSchema = z.object({
   ]),
   videoTimestampSeconds: z.number().int().nonnegative().optional(),
   pauseOnTrigger: z.boolean().optional(),
-  configSchema: z.record(z.any()),
-  correctAnswers: z.record(z.any()),
+  // Pass both key and value types explicitly
+  configSchema: z.record(z.string(), z.any()),
+  correctAnswers: z.record(z.string(), z.any()),
 });
+
 export const updateInteractiveElementSchema = createInteractiveElementSchema.partial();

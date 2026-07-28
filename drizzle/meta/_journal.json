@@ -22,6 +22,13 @@
       "when": 1785189777398,
       "tag": "0002_pretty_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785233616926,
+      "tag": "0003_dashing_bullseye",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'student', 'educator', 'parent']);
 export const approvalEnum = pgEnum('account_approval', ['approve', 'pending', 'closed', 'suspended']);
-export const resourceTypeEnum = pgEnum('resource_type', ['video', 'pdf', 'article', 'image', 'interactive']);
+export const resourceTypeEnum = pgEnum('resource_type', ['video', 'pdf', 'article', 'image', 'interactive', 'quiz']);
 export const interactionTypeEnum = pgEnum('interaction_type', [
   'drag_and_drop',
   'fill_blank',
@@ -11,6 +11,7 @@ export const interactionTypeEnum = pgEnum('interaction_type', [
   'branching',
   'interactive_video',
   'image_sequencing',
+  'multiple_choice'
 ]);
 export const learningPlanStatusEnum = pgEnum('learning_plan_status', ['active', 'completed', 'paused', 'cancelled']);
 export const topicStatusEnum = pgEnum('topic_status', ['pending', 'in_progress', 'completed']);

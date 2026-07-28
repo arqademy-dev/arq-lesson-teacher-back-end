@@ -4,8 +4,8 @@ import { db } from '../src/config/db.js';
 import { users } from '../src/db/schema.js';
 
 async function seedAdmin() {
-  const email = process.env.SEED_ADMIN_EMAIL || 'admin@arqademy.com';
-  const password = process.env.SEED_ADMIN_PASSWORD || 'ChangeMe123!';
+  const email = process.env.SEED_ADMIN_EMAIL || 'admin@gmail.com';
+  const password = process.env.SEED_ADMIN_PASSWORD || '225466';
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -14,8 +14,8 @@ async function seedAdmin() {
     .values({
       email,
       password: hashedPassword,
-      firstName: 'Super',
-      lastName: 'Admin',
+      firstName: 'Smart',
+      lastName: 'Tanko',
       role: 'admin',
       arqId: 'ARQADMIN01',
       verified: true,
