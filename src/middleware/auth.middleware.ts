@@ -1,41 +1,50 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { eq } from 'drizzle-orm';
+import { db } from '../config/db.js';
+import { users } from '../db/schema.js';
 
-export interface JwtUserPayload {
-  id: number;
+export interface AuthenticatedUser {
+  id: string;
   email: string;
+  role: string;
 }
 
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtUserPayload;
+      user?: AuthenticatedUser;
     }
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
+
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
     const token = req.cookies?.token;
-
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized', message: 'Authentication cookie is missing' });
     }
 
-    const secret = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
-    const decoded = jwt.verify(token, secret) as JwtUserPayload;
-    req.user = decoded;
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string };
+
+    const [user] = await db.select().from(users).where(eq(users.id, decoded.id)).limit(1);
+
+    if (!user || !user.active) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Account not found or inactive' });
+    }
+
+    req.user = { id: user.id, email: user.email, role: user.role };
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Unauthorized', message: 'Session expired or token corrupt' });
   }
 }
 
-// Optional: role-gate specific routes (useful once admin routes exist)
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const role = (req.user as any)?.role;
-    if (!role || !roles.includes(role)) {
+    if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ message: 'Forbidden: insufficient role' });
     }
     next();

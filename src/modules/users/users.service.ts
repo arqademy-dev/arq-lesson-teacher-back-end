@@ -18,7 +18,7 @@ export class UserService {
     return user || null;
   }
 
-  async findEducatorProfileByUserId(userId: number) {
+  async findEducatorProfileByUserId(userId: string) {
     const [profile] = await db.select().from(educators).where(eq(educators.userId, userId)).limit(1);
     return profile || null;
   }

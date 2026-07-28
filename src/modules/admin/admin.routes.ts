@@ -1,13 +1,22 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/auth.middleware.js';
-// import { AdminController } from './admin.controller.js';
+import { AdminController } from './admin.controller.js';
+import { authenticate, requireRole } from '../../middleware/auth.middleware.js';
+import { validateBody } from '../../middleware/validate.middleware.js';
+import { adminLoginSchema, approvalActionSchema } from './admin.validation.js';
 
 const router = Router();
-// const controller = new AdminController();
+const controller = new AdminController();
 
-router.post('/login', /* controller.login */ (req, res) => res.status(501).json({ message: 'Not implemented yet' }));
-router.patch('/educators/:userId/approve', authenticate, /* requireRole('admin'), controller.approveEducator */ (req, res) =>
-  res.status(501).json({ message: 'Not implemented yet' })
+router.post('/login', validateBody(adminLoginSchema), controller.login);
+
+router.get('/educators/pending', authenticate, requireRole('admin'), controller.listPendingEducators);
+router.get('/educators', authenticate, requireRole('admin'), controller.listAllEducators);
+router.patch(
+  '/educators/:educatorId/approval',
+  authenticate,
+  requireRole('admin'),
+  validateBody(approvalActionSchema),
+  controller.updateEducatorApproval
 );
 
 export { router as adminRoutes };

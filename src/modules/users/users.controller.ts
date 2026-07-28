@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { UserService } from './users.service.js';
-import { JwtUserPayload } from '../../middleware/auth.middleware.js';
+import { AuthenticatedUser } from '../../middleware/auth.middleware.js';
 
 const userService = new UserService();
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
@@ -74,7 +74,7 @@ export class UserController {
   }
 
   async getMe(req: Request, res: Response) {
-    const tokenPayload = req.user as JwtUserPayload;
+    const tokenPayload = req.user as AuthenticatedUser;
     const user = await userService.findUserByEmail(tokenPayload.email);
     if (!user) return res.status(404).json({ message: 'User not found' });
 

@@ -9,6 +9,10 @@ import 'dotenv/config';
 import { userRoutes } from './modules/users/users.routes.js';
 import { openApiDocument } from './docs/openapi.js';
 
+import { adminRoutes } from './modules/admin/admin.routes.js';
+import { curriculumRoutes } from './modules/curriculum/curriculum.routes.js';
+import { interactiveRoutes } from './modules/interactive/interactive.routes.js';
+
 export const app = express();
 
 app.use(helmet());
@@ -21,6 +25,11 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 app.use('/api/users', userRoutes);
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/curriculum', curriculumRoutes);
+app.use('/api/admin/curriculum', interactiveRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
