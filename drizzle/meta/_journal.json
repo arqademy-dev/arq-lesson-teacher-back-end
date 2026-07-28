@@ -8,6 +8,20 @@
       "when": 1784882724478,
       "tag": "0000_fuzzy_secret_warriors",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785171894195,
+      "tag": "0001_cute_inertia",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785189777398,
+      "tag": "0002_pretty_genesis",
+      "breakpoints": true
     }
   ]
 }
