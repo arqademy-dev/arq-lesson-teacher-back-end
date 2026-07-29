@@ -13,6 +13,13 @@ import { adminRoutes } from './modules/admin/admin.routes.js';
 import { curriculumRoutes } from './modules/curriculum/curriculum.routes.js';
 import { interactiveRoutes } from './modules/interactive/interactive.routes.js';
 
+import { studentsRoutes } from './modules/students/students.routes.js';
+import { learningPlanRoutes } from './modules/learning-plans/learning-plans.routes.js';
+
+import { studentAuthRoutes } from './modules/students/students-auth.routes.js';
+import { studentPaymentRoutes, adminPaymentRoutes } from './modules/payments/payments.routes.js';
+import { dailyRoutes } from './modules/daily/daily.routes.js';
+
 export const app = express();
 
 app.use(helmet());
@@ -30,6 +37,14 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/curriculum', curriculumRoutes);
 app.use('/api/admin/curriculum', interactiveRoutes);
+
+app.use('/api/educators/students', studentsRoutes);
+app.use('/api/educators/learning-plans', learningPlanRoutes);
+
+app.use('/api/students', studentAuthRoutes);
+app.use('/api/students/payments', studentPaymentRoutes);
+app.use('/api/admin/payments', adminPaymentRoutes);
+app.use('/api/students/me', dailyRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });

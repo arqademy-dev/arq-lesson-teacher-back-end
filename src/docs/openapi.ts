@@ -86,6 +86,148 @@ export const openApiDocument = {
         type: 'object',
         properties: { message: { type: 'string' } },
       },
+      Student: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          educatorId: { type: 'string', format: 'uuid' },
+          enrollmentDate: { type: 'string', format: 'date' },
+          academicLevel: { type: 'string', nullable: true },
+        },
+      },
+      EnrollStudentResponse: {
+        type: 'object',
+        properties: {
+          message: { type: 'string' },
+          student: { $ref: '#/components/schemas/Student' },
+          credentials: {
+            type: 'object',
+            properties: {
+              email: { type: 'string' },
+              arqId: { type: 'string' },
+              temporaryPassword: { type: 'string', nullable: true, description: 'Only present if no password was supplied at enrollment — share once with the parent/student.' },
+            },
+          },
+        },
+      },
+      ScheduledSession: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          learningPlanTopicId: { type: 'string', format: 'uuid' },
+          scheduledDate: { type: 'string', format: 'date' },
+          sessionDayNumber: { type: 'integer' },
+          isCompleted: { type: 'boolean' },
+          educatorNotes: { type: 'string', nullable: true },
+        },
+      },
+      LearningPlanTopic: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          learningPlanId: { type: 'string', format: 'uuid' },
+          topicId: { type: 'string', format: 'uuid' },
+          sequenceOrder: { type: 'integer' },
+          customDurationDays: { type: 'integer', nullable: true },
+          status: { type: 'string', enum: ['pending', 'in_progress', 'completed'] },
+          topic: { $ref: '#/components/schemas/Topic' },
+          sessions: { type: 'array', items: { $ref: '#/components/schemas/ScheduledSession' } },
+        },
+      },
+      LearningPlan: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          studentId: { type: 'string', format: 'uuid' },
+          educatorId: { type: 'string', format: 'uuid' },
+          sessionsPerWeek: { type: 'integer' },
+          preferredDays: { type: 'array', items: { type: 'string' } },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date', nullable: true },
+          status: { type: 'string', enum: ['active', 'completed', 'paused', 'cancelled'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          topics: { type: 'array', items: { $ref: '#/components/schemas/LearningPlanTopic' } },
+        },
+      },
+      PricingTier: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          minTopics: { type: 'integer' },
+          maxTopics: { type: 'integer', nullable: true },
+          priceNaira: { type: 'integer' },
+          isActive: { type: 'boolean' },
+        },
+      },
+      Payment: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          studentId: { type: 'string', format: 'uuid' },
+          learningPlanId: { type: 'string', format: 'uuid' },
+          pricingTierId: { type: 'string', format: 'uuid' },
+          amountNaira: { type: 'integer' },
+          status: { type: 'string', enum: ['pending', 'success', 'failed', 'refunded'] },
+          provider: { type: 'string', nullable: true },
+          providerReference: { type: 'string', nullable: true },
+          paidAt: { type: 'string', format: 'date-time', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      SafeInteractiveElement: {
+        type: 'object',
+        description: 'Same as InteractiveElement but with correctAnswers stripped — this is what student-facing endpoints return.',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          resourceId: { type: 'string', format: 'uuid' },
+          interactionType: {
+            type: 'string',
+            enum: ['drag_and_drop', 'fill_blank', 'hotspot', 'branching', 'interactive_video', 'image_sequencing', 'multiple_choice'],
+          },
+          videoTimestampSeconds: { type: 'integer', nullable: true },
+          pauseOnTrigger: { type: 'boolean' },
+          configSchema: { type: 'object', additionalProperties: true },
+        },
+      },
+      CurrentSessionResponse: {
+        type: 'object',
+        properties: {
+          session: { $ref: '#/components/schemas/ScheduledSession' },
+          isOverdue: { type: 'boolean', description: 'True if this session\'s scheduledDate is in the past — student missed a day and must catch up.' },
+          topic: { $ref: '#/components/schemas/Topic' },
+          learningPlanId: { type: 'string', format: 'uuid' },
+          resources: {
+            type: 'array',
+            items: {
+              allOf: [
+                { $ref: '#/components/schemas/Resource' },
+                { type: 'object', properties: { interactiveElements: { type: 'array', items: { $ref: '#/components/schemas/SafeInteractiveElement' } } } },
+              ],
+            },
+          },
+        },
+      },
+      SubmissionResult: {
+        type: 'object',
+        properties: {
+          isCorrect: { type: 'boolean' },
+          scoreAwarded: { type: 'integer' },
+          log: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              studentId: { type: 'string', format: 'uuid' },
+              interactiveElementId: { type: 'string', format: 'uuid' },
+              scheduledSessionId: { type: 'string', format: 'uuid' },
+              studentResponse: { type: 'object', additionalProperties: true },
+              isCorrect: { type: 'boolean' },
+              scoreAwarded: { type: 'integer' },
+              submittedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -536,6 +678,265 @@ export const openApiDocument = {
         security: [{ cookieAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '200': { description: 'Interactive element deleted' } },
+      },
+    },
+
+    // ================= EDUCATOR: STUDENT ENROLLMENT =================
+    '/api/educators/students': {
+      post: {
+        summary: 'Enroll a new student under the logged-in (approved) educator',
+        tags: ['Educator - Students'],
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['firstName', 'lastName', 'email'],
+                properties: {
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                  email: { type: 'string', format: 'email' },
+                  academicLevel: { type: 'string' },
+                  password: { type: 'string', minLength: 6, description: 'Omit to auto-generate a temporary password' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Student enrolled', content: { 'application/json': { schema: { $ref: '#/components/schemas/EnrollStudentResponse' } } } },
+          '400': { description: 'Email already registered', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          '403': { description: 'Educator not yet approved' },
+        },
+      },
+      get: {
+        summary: 'List students belonging to the logged-in educator',
+        tags: ['Educator - Students'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'List of students', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Student' } } } } } },
+      },
+    },
+    '/api/educators/students/{id}': {
+      get: {
+        summary: 'Get one of my students by ID',
+        tags: ['Educator - Students'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'Student', content: { 'application/json': { schema: { $ref: '#/components/schemas/Student' } } } }, '404': { description: 'Not found' } },
+      },
+    },
+
+    // ================= EDUCATOR: LEARNING PLANS =================
+    '/api/educators/learning-plans': {
+      post: {
+        summary: 'Build a custom learning plan for one of my students (auto-generates the session calendar)',
+        tags: ['Educator - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['studentId', 'sessionsPerWeek', 'preferredDays', 'startDate', 'topics'],
+                properties: {
+                  studentId: { type: 'string', format: 'uuid' },
+                  sessionsPerWeek: { type: 'integer', minimum: 1, maximum: 7 },
+                  preferredDays: {
+                    type: 'array',
+                    items: { type: 'string', enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] },
+                  },
+                  startDate: { type: 'string', format: 'date' },
+                  topics: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['topicId'],
+                      properties: {
+                        topicId: { type: 'string', format: 'uuid' },
+                        customDurationDays: { type: 'integer', description: 'Override the topic\'s default expectedDurationDays' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Learning plan created with full generated schedule', content: { 'application/json': { schema: { $ref: '#/components/schemas/LearningPlan' } } } },
+          '404': { description: 'Student not found, or does not belong to you' },
+        },
+      },
+    },
+    '/api/educators/learning-plans/{id}': {
+      get: {
+        summary: 'Get a learning plan with its full topic + schedule breakdown',
+        tags: ['Educator - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'Learning plan', content: { 'application/json': { schema: { $ref: '#/components/schemas/LearningPlan' } } } }, '404': { description: 'Not found' } },
+      },
+    },
+    '/api/educators/learning-plans/student/{studentId}': {
+      get: {
+        summary: 'List all learning plans for a specific student of mine',
+        tags: ['Educator - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'List of learning plans', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/LearningPlan' } } } } } },
+      },
+    },
+
+    // ================= STUDENT AUTH =================
+    '/api/students/login': {
+      post: {
+        summary: 'Student login — sets HTTP-only cookie',
+        tags: ['Student Auth'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['email', 'password'],
+                properties: { email: { type: 'string', format: 'email' }, password: { type: 'string' } },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Login successful' },
+          '401': { description: 'Invalid credentials', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+        },
+      },
+    },
+    '/api/students/me': {
+      get: {
+        summary: 'Get current student profile',
+        tags: ['Student Auth'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'Student profile data' }, '401': { description: 'Unauthorized' } },
+      },
+    },
+
+    // ================= PAYMENTS =================
+    '/api/students/payments/initiate': {
+      post: {
+        summary: 'Initiate payment for a learning plan (price auto-computed from topic count via pricing tiers)',
+        tags: ['Payments'],
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { type: 'object', required: ['learningPlanId'], properties: { learningPlanId: { type: 'string', format: 'uuid' } } },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Payment initiated — currently requires manual admin approval',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    payment: { $ref: '#/components/schemas/Payment' },
+                    redirectUrl: { type: 'string', nullable: true, description: 'Null under the manual provider; populated once GafiaPay is wired in' },
+                  },
+                },
+              },
+            },
+          },
+          '200': { description: 'A payment for this plan already exists' },
+          '404': { description: 'Learning plan not found' },
+        },
+      },
+    },
+    '/api/admin/payments/pending': {
+      get: {
+        summary: 'List payments awaiting manual approval',
+        tags: ['Admin - Payments'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'List of pending payments', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Payment' } } } } } },
+      },
+    },
+    '/api/admin/payments': {
+      get: {
+        summary: 'List all payments',
+        tags: ['Admin - Payments'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'List of all payments', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Payment' } } } } } },
+      },
+    },
+    '/api/admin/payments/{id}/approve': {
+      patch: {
+        summary: 'Manually approve a payment (e.g. after confirming a bank transfer) — unlocks the student\'s learning plan',
+        tags: ['Admin - Payments'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'Payment approved', content: { 'application/json': { schema: { $ref: '#/components/schemas/Payment' } } } }, '404': { description: 'Not found' } },
+      },
+    },
+    '/api/admin/payments/{id}/reject': {
+      patch: {
+        summary: 'Reject a payment',
+        tags: ['Admin - Payments'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'Payment rejected', content: { 'application/json': { schema: { $ref: '#/components/schemas/Payment' } } } }, '404': { description: 'Not found' } },
+      },
+    },
+
+    // ================= STUDENT DAILY WORKFLOW =================
+    '/api/students/me/current-session': {
+      get: {
+        summary: 'Get the student\'s current active session — always the earliest incomplete one (enforces catch-up if a day was missed)',
+        tags: ['Student - Daily Workflow'],
+        security: [{ cookieAuth: [] }],
+        responses: {
+          '200': { description: 'Current session with resources and interactive elements (correctAnswers stripped)', content: { 'application/json': { schema: { $ref: '#/components/schemas/CurrentSessionResponse' } } } },
+        },
+      },
+    },
+    '/api/students/me/sessions/{sessionId}/complete': {
+      post: {
+        summary: 'Mark the current session complete — unlocks the next scheduled day',
+        tags: ['Student - Daily Workflow'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Session marked complete', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, session: { $ref: '#/components/schemas/ScheduledSession' } } } } } },
+          '400': { description: 'This is not the student\'s current session, or it is already completed' },
+        },
+      },
+    },
+    '/api/students/me/submissions': {
+      post: {
+        summary: 'Submit a response to an interactive element for grading',
+        tags: ['Student - Daily Workflow'],
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['interactiveElementId', 'scheduledSessionId', 'response'],
+                properties: {
+                  interactiveElementId: { type: 'string', format: 'uuid' },
+                  scheduledSessionId: { type: 'string', format: 'uuid' },
+                  response: { type: 'object', additionalProperties: true, description: 'Raw student answer payload, shape matches the element\'s configSchema' },
+                },
+              },
+            },
+          },
+        },
+        responses: { '200': { description: 'Graded submission result', content: { 'application/json': { schema: { $ref: '#/components/schemas/SubmissionResult' } } } } },
       },
     },
 
