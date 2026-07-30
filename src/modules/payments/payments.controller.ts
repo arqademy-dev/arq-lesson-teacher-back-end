@@ -12,10 +12,22 @@ export class PaymentController {
     const studentProfile = await paymentService.getStudentProfileByUserId(req.user!.id);
     if (!studentProfile) return res.status(404).json({ message: 'Student profile not found' });
 
-    const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, req.body.learningPlanId)).limit(1);
-    if (!plan || plan.studentId !== studentProfile.id) {
-      return res.status(404).json({ message: 'Learning plan not found' });
-    }
+      const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, req.body.learningPlanId)).limit(1);
+
+      // ---- ADD THIS LOG BLOCK ----
+      console.log('--- DEBUG LEARNING PLAN ---');
+      console.log('Fetched Plan Record:', plan);
+      console.log('req.body.learningPlanId:', req.body.learningPlanId);
+      console.log('plan.studentId:', plan?.studentId, `(Type: ${typeof plan?.studentId})`);
+      console.log('studentProfile.id:', studentProfile?.id, `(Type: ${typeof studentProfile?.id})`);
+      console.log('Does plan exist?:', !!plan);
+      console.log('Do IDs match?:', plan?.studentId === studentProfile?.id);
+      console.log('---------------------------');
+
+      if (!plan || plan.studentId !== studentProfile.id) {
+        return res.status(404).json({ message: 'Learning plan not found' });
+      }
+
 
     try {
       const { payment, alreadyExisted, redirectUrl } = await paymentService.initiatePayment(
