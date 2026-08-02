@@ -50,7 +50,48 @@ export const openApiDocument = {
           urlOrPath: { type: 'string' },
           dayNumber: { type: 'integer' },
           sortOrder: { type: 'integer' },
+          contentBody: {
+            type: 'array',
+            nullable: true,
+            description: 'Array of content blocks — only populated when resourceType is "article"',
+            items: { $ref: '#/components/schemas/ContentBlock' },
+          },
         },
+      },
+      ContentBlock: {
+        oneOf: [
+          {
+            type: 'object',
+            properties: { type: { type: 'string', enum: ['heading'] }, level: { type: 'integer', enum: [1, 2, 3] }, text: { type: 'string' } },
+          },
+          {
+            type: 'object',
+            properties: { type: { type: 'string', enum: ['paragraph'] }, text: { type: 'string' } },
+          },
+          {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['image'] },
+              url: { type: 'string', format: 'uri' },
+              altText: { type: 'string' },
+              caption: { type: 'string' },
+            },
+          },
+          {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: ['file'] },
+              url: { type: 'string', format: 'uri' },
+              fileName: { type: 'string' },
+              mimeType: { type: 'string' },
+            },
+          },
+          {
+            type: 'object',
+            properties: { type: { type: 'string', enum: ['bullet_list'] }, items: { type: 'array', items: { type: 'string' } } },
+          },
+        ],
+        discriminator: { propertyName: 'type' },
       },
       InteractiveElement: {
         type: 'object',
@@ -224,6 +265,129 @@ export const openApiDocument = {
               isCorrect: { type: 'boolean' },
               scoreAwarded: { type: 'integer' },
               submittedAt: { type: 'string', format: 'date-time' },
+            },
+          },
+        },
+      },
+      PresignedUploadResponse: {
+        type: 'object',
+        properties: {
+          uploadUrl: { type: 'string', format: 'uri', description: 'Signed URL — PUT the raw file here directly, expires in 5 minutes' },
+          publicUrl: { type: 'string', format: 'uri', description: 'Permanent public URL to use once the upload completes' },
+          key: { type: 'string', description: 'Object key within the R2 bucket' },
+        },
+      },
+      AdminDashboardSummary: {
+        type: 'object',
+        properties: {
+          educators: {
+            type: 'object',
+            properties: { total: { type: 'integer' }, pendingApproval: { type: 'integer' }, approved: { type: 'integer' } },
+          },
+          students: { type: 'object', properties: { total: { type: 'integer' } } },
+          curriculum: {
+            type: 'object',
+            properties: { subjects: { type: 'integer' }, classes: { type: 'integer' }, topics: { type: 'integer' }, resources: { type: 'integer' } },
+          },
+          payments: {
+            type: 'object',
+            properties: {
+              totalRevenueNaira: { type: 'integer' },
+              pending: { type: 'integer' },
+              successful: { type: 'integer' },
+              failed: { type: 'integer' },
+            },
+          },
+          todaysActivity: {
+            type: 'object',
+            properties: { totalSessionsScheduled: { type: 'integer' }, completed: { type: 'integer' }, remaining: { type: 'integer' } },
+          },
+        },
+      },
+      EducatorDashboardSummary: {
+        type: 'object',
+        properties: {
+          students: { type: 'object', properties: { total: { type: 'integer' } } },
+          learningPlans: { type: 'object', properties: { total: { type: 'integer' }, active: { type: 'integer' } } },
+          payments: {
+            type: 'object',
+            properties: { pending: { type: 'integer' }, successful: { type: 'integer' }, totalCollectedNaira: { type: 'integer' } },
+          },
+          todaysActivity: {
+            type: 'object',
+            properties: { totalSessionsScheduled: { type: 'integer' }, completed: { type: 'integer' }, remaining: { type: 'integer' } },
+          },
+        },
+      },
+      StudentDashboardSummary: {
+        type: 'object',
+        properties: {
+          currentSession: { $ref: '#/components/schemas/CurrentSessionResponse' },
+          progress: {
+            type: 'object',
+            properties: { totalTopics: { type: 'integer' }, completedTopics: { type: 'integer' }, percentComplete: { type: 'integer' } },
+          },
+          payments: {
+            type: 'object',
+            properties: { hasPendingPayment: { type: 'boolean' }, hasSuccessfulPayment: { type: 'boolean' } },
+          },
+          performance: {
+            type: 'object',
+            properties: {
+              totalSubmissions: { type: 'integer' },
+              correctSubmissions: { type: 'integer' },
+              accuracyPercent: { type: 'integer' },
+              averageScore: { type: 'integer' },
+            },
+          },
+        },
+      },
+      StudentReport: {
+        type: 'object',
+        properties: {
+          student: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              academicLevel: { type: 'string', nullable: true },
+              enrollmentDate: { type: 'string', format: 'date' },
+            },
+          },
+          learningPlans: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                planId: { type: 'string', format: 'uuid' },
+                status: { type: 'string' },
+                startDate: { type: 'string', format: 'date' },
+                paymentStatus: { type: 'string' },
+                topics: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      topicTitle: { type: 'string' },
+                      status: { type: 'string' },
+                      totalSessions: { type: 'integer' },
+                      completedSessions: { type: 'integer' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          assessmentSummary: {
+            type: 'object',
+            properties: {
+              totalSubmissions: { type: 'integer' },
+              correctSubmissions: { type: 'integer' },
+              accuracyPercent: { type: 'integer' },
+              averageScore: { type: 'integer' },
+              byInteractionType: {
+                type: 'object',
+                additionalProperties: { type: 'object', properties: { total: { type: 'integer' }, correct: { type: 'integer' } } },
+              },
             },
           },
         },
@@ -937,6 +1101,94 @@ export const openApiDocument = {
           },
         },
         responses: { '200': { description: 'Graded submission result', content: { 'application/json': { schema: { $ref: '#/components/schemas/SubmissionResult' } } } } },
+      },
+    },
+
+    // ================= FILE UPLOADS (R2) =================
+    '/api/admin/files/presigned-upload-url': {
+      post: {
+        summary: 'Get a presigned R2 upload URL — upload the file directly to the returned uploadUrl, then use publicUrl in your content',
+        tags: ['Files'],
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['fileName', 'contentType'],
+                properties: {
+                  fileName: { type: 'string', example: 'banner.jpg' },
+                  contentType: { type: 'string', example: 'image/jpeg' },
+                  folder: { type: 'string', enum: ['articles', 'interactive-elements', 'resources', 'misc'], default: 'misc' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Presigned upload details', content: { 'application/json': { schema: { $ref: '#/components/schemas/PresignedUploadResponse' } } } },
+        },
+      },
+    },
+
+    // ================= DASHBOARDS =================
+    '/api/admin/dashboard/summary': {
+      get: {
+        summary: 'Admin dashboard — system-wide counts, payments, and today\'s activity',
+        tags: ['Dashboards'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'Admin dashboard summary', content: { 'application/json': { schema: { $ref: '#/components/schemas/AdminDashboardSummary' } } } } },
+      },
+    },
+    '/api/educators/dashboard/summary': {
+      get: {
+        summary: 'Educator dashboard — own students, plans, payments, and today\'s activity',
+        tags: ['Dashboards'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'Educator dashboard summary', content: { 'application/json': { schema: { $ref: '#/components/schemas/EducatorDashboardSummary' } } } } },
+      },
+    },
+    '/api/students/me/dashboard': {
+      get: {
+        summary: 'Student dashboard — current session, progress, payment status, performance',
+        tags: ['Dashboards'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'Student dashboard summary', content: { 'application/json': { schema: { $ref: '#/components/schemas/StudentDashboardSummary' } } } } },
+      },
+    },
+
+    // ================= REPORTS / ASSESSMENTS =================
+    '/api/admin/students/{studentId}/report': {
+      get: {
+        summary: 'Full assessment report for any student (admin access)',
+        tags: ['Reports'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Student report', content: { 'application/json': { schema: { $ref: '#/components/schemas/StudentReport' } } } },
+          '404': { description: 'Student not found' },
+        },
+      },
+    },
+    '/api/educators/students/{studentId}/report': {
+      get: {
+        summary: 'Full assessment report for one of my students (educator access)',
+        tags: ['Reports'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Student report', content: { 'application/json': { schema: { $ref: '#/components/schemas/StudentReport' } } } },
+          '404': { description: 'Student not found, or does not belong to you' },
+        },
+      },
+    },
+    '/api/students/me/report': {
+      get: {
+        summary: 'Full assessment report for the logged-in student (self access)',
+        tags: ['Reports'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'Own student report', content: { 'application/json': { schema: { $ref: '#/components/schemas/StudentReport' } } } } },
       },
     },
 

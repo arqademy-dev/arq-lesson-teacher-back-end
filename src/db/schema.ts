@@ -85,6 +85,7 @@ export const topics = pgTable('topics', {
 
 export const resources = pgTable('resources', {
   id: uuid('id').defaultRandom().primaryKey(),
+  contentBody: jsonb('content_body').$type<Record<string, any>[]>(), // array of ContentBlock, used mainly by resourceType 'article'
   topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'cascade' }).notNull(),
   title: varchar('title', { length: 100 }).notNull(),
   resourceType: resourceTypeEnum('resource_type').notNull(),

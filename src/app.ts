@@ -20,6 +20,13 @@ import { studentAuthRoutes } from './modules/students/students-auth.routes.js';
 import { studentPaymentRoutes, adminPaymentRoutes } from './modules/payments/payments.routes.js';
 import { dailyRoutes } from './modules/daily/daily.routes.js';
 
+import { filesRoutes } from './modules/files/files.routes.js';
+import { adminDashboardRoutes } from './modules/dashboard/admin-dashboard.routes.js';
+import { educatorDashboardRoutes } from './modules/dashboard/educator-dashboard.routes.js';
+import { studentDashboardRoutes } from './modules/dashboard/student-dashboard.routes.js';
+import { adminReportRoutes, educatorReportRoutes, studentReportRoutes } from './modules/reports/reports.routes.js';
+
+
 export const app = express();
 
 app.use(helmet());
@@ -45,6 +52,14 @@ app.use('/api/students', studentAuthRoutes);
 app.use('/api/students/payments', studentPaymentRoutes);
 app.use('/api/admin/payments', adminPaymentRoutes);
 app.use('/api/students/me', dailyRoutes);
+
+app.use('/api/admin/files', filesRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/educators/dashboard', educatorDashboardRoutes);
+app.use('/api/students/me/dashboard', studentDashboardRoutes);
+app.use('/api/admin/students', adminReportRoutes);        // GET /api/admin/students/:studentId/report
+app.use('/api/educators/students', educatorReportRoutes); // GET /api/educators/students/:studentId/report — safe alongside the existing enroll/list routes at this same prefix, since /:id and /:studentId/report never collide
+app.use('/api/students/me', studentReportRoutes);          // GET /api/students/me/report
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { contentBodySchema } from '../../shared/content-blocks.js';
 
 export const createSubjectSchema = z.object({
   title: z.string().min(1).max(100),
@@ -27,5 +28,6 @@ export const createResourceSchema = z.object({
   urlOrPath: z.string().min(1),
   dayNumber: z.number().int().positive(),
   sortOrder: z.number().int().nonnegative(),
+  contentBody: contentBodySchema.optional(),
 });
 export const updateResourceSchema = createResourceSchema.partial();
