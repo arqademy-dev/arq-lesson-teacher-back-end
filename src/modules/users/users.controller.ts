@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { UserService } from './users.service.js';
 import { AuthenticatedUser } from '../../middleware/auth.middleware.js';
+import { getAuthCookieOptions } from '../../utils/cookie-options.js';
 
 const userService = new UserService();
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
@@ -40,13 +41,7 @@ export class UserController {
 
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-      res.cookie('token', token, {
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 * 1000, // ms, not seconds, in Express
-      });
+      res.cookie('token', token, getAuthCookieOptions());
 
       const profile = await userService.findEducatorProfileByUserId(user.id);
       const currentApprovalState = profile ? profile.accountApproval : 'pending';
@@ -69,7 +64,7 @@ export class UserController {
   }
 
   async logout(req: Request, res: Response) {
-    res.clearCookie('token', { path: '/' });
+    res.clearCookie('token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' });
     return res.status(200).json({ message: 'Logout successful' });
   }
 

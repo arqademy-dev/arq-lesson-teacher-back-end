@@ -30,7 +30,20 @@ import { adminReportRoutes, educatorReportRoutes, studentReportRoutes } from './
 export const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_URL || true, credentials: true }));
+// app.use(cors({ origin: process.env.CLIENT_URL || true, credentials: true }));
+const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:3000'].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 app.use(cookieParser(process.env.JWT_SECRET || 'fallback-cookie-signing-key-string'));
 

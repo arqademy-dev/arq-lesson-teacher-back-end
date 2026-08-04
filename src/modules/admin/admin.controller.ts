@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AdminService } from './admin.service.js';
+import { getAuthCookieOptions } from '../../utils/cookie-options.js';
 
 const adminService = new AdminService();
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
@@ -18,13 +19,7 @@ export class AdminController {
 
       const token = jwt.sign({ id: admin.id, email: admin.email }, JWT_SECRET, { expiresIn: '7d' });
 
-      res.cookie('token', token, {
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 * 1000,
-      });
+      res.cookie('token', token, getAuthCookieOptions());
 
       return res.status(200).json({
         message: 'Admin login successful',

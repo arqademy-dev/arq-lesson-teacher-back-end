@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import { users, students } from '../../db/schema.js';
+import { getAuthCookieOptions } from '../../utils/cookie-options.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
 
@@ -24,13 +25,7 @@ export class StudentAuthController {
 
       const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-      res.cookie('token', token, {
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7 * 1000,
-      });
+      res.cookie('token', token, getAuthCookieOptions());
 
       return res.status(200).json({ message: 'Login successful', user: { id: user.id, email: user.email, arqId: user.arqId } });
     } catch (err) {
