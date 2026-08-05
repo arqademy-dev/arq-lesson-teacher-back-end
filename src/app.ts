@@ -31,7 +31,10 @@ export const app = express();
 
 app.use(helmet());
 // app.use(cors({ origin: process.env.CLIENT_URL || true, credentials: true }));
-const allowedOrigins = [process.env.CLIENT_URL, 'http://localhost:3000'].filter(Boolean);
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  ...(process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) || []),
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
