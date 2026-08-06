@@ -31,6 +31,8 @@ export const app = express();
 
 app.use(helmet());
 // app.use(cors({ origin: process.env.CLIENT_URL || true, credentials: true }));
+app.use(helmet());
+
 const allowedOrigins = [
   process.env.CLIENT_URL,
   ...(process.env.CORS_ORIGINS?.split(',').map((o) => o.trim()) || []),
@@ -38,6 +40,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
+    // !origin allows server-to-server requests, curl, and tools like Postman
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -46,6 +49,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 
 app.use(express.json());
 app.use(cookieParser(process.env.JWT_SECRET || 'fallback-cookie-signing-key-string'));
