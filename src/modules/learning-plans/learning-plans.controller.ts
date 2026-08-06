@@ -38,4 +38,14 @@ export class LearningPlanController {
     const plans = await learningPlanService.listPlansForStudent(req.params.studentId);
     return res.json(plans);
   }
+
+  async getStudentPlanBreakdown(req: Request, res: Response) {
+    const { studentId } = req.params as { studentId: string };
+
+    const student = await studentService.getStudentBelongingToEducator(studentId, req.educatorProfile!.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    const breakdown = await learningPlanService.getStudentPlanBreakdown(studentId);
+    return res.json(breakdown);
+  }
 }

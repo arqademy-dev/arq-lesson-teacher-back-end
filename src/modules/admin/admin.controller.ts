@@ -56,4 +56,11 @@ export class AdminController {
 
     return res.json({ message: `Educator ${action}d successfully`, educator: updated });
   }
+
+    async getEducatorProfile(req: Request, res: Response) {
+      const { educatorId } = req.params as { educatorId: string };
+      const profile = await adminService.getEducatorProfile(educatorId);
+      if (!profile) return res.status(404).json({ message: 'Educator not found' });
+      return res.json(profile);
+    }
 }

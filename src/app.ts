@@ -25,6 +25,7 @@ import { adminDashboardRoutes } from './modules/dashboard/admin-dashboard.routes
 import { educatorDashboardRoutes } from './modules/dashboard/educator-dashboard.routes.js';
 import { studentDashboardRoutes } from './modules/dashboard/student-dashboard.routes.js';
 import { adminReportRoutes, educatorReportRoutes, studentReportRoutes } from './modules/reports/reports.routes.js';
+import { adminStudentsRoutes } from './modules/admin/admin-students.routes.js';
 
 
 export const app = express();
@@ -64,6 +65,8 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/curriculum', curriculumRoutes);
 app.use('/api/admin/curriculum', interactiveRoutes);
+app.use('/api/admin/students', adminStudentsRoutes);
+app.use('/api/admin/students', adminReportRoutes);
 
 app.use('/api/educators/students', studentsRoutes);
 app.use('/api/educators/learning-plans', learningPlanRoutes);

@@ -11,6 +11,7 @@ router.post('/login', validateBody(adminLoginSchema), controller.login);
 
 router.get('/educators/pending', authenticate, requireRole('admin'), controller.listPendingEducators);
 router.get('/educators', authenticate, requireRole('admin'), controller.listAllEducators);
+router.get('/educators/:educatorId', authenticate, requireRole('admin'), controller.getEducatorProfile);
 router.patch(
   '/educators/:educatorId/approval',
   authenticate,

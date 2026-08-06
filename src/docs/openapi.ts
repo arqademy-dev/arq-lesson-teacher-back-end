@@ -392,6 +392,89 @@ export const openApiDocument = {
           },
         },
       },
+      StudentMiniProfile: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          firstName: { type: 'string' },
+          lastName: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          arqId: { type: 'string' },
+          academicLevel: { type: 'string', nullable: true },
+          enrollmentDate: { type: 'string', format: 'date' },
+        },
+      },
+      EducatorProfileWithStudents: {
+        type: 'object',
+        properties: {
+          educator: { $ref: '#/components/schemas/Educator' },
+          accountStatus: { type: 'object', properties: { active: { type: 'boolean' }, verified: { type: 'boolean' } }, nullable: true },
+          students: { type: 'array', items: { $ref: '#/components/schemas/StudentMiniProfile' } },
+          totalStudents: { type: 'integer' },
+        },
+      },
+      StudentLearningHistory: {
+        type: 'object',
+        properties: {
+          student: { $ref: '#/components/schemas/StudentMiniProfile' },
+          learningPlans: {
+            type: 'array',
+            items: {
+              allOf: [{ $ref: '#/components/schemas/LearningPlan' }, { type: 'object', properties: { isPaid: { type: 'boolean' } } }],
+            },
+          },
+        },
+      },
+      LearningPlanBreakdown: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            planId: { type: 'string', format: 'uuid' },
+            status: { type: 'string' },
+            startDate: { type: 'string', format: 'date' },
+            topics: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  topicId: { type: 'string', format: 'uuid' },
+                  topicTitle: { type: 'string' },
+                  status: { type: 'string' },
+                  done: { type: 'array', items: { $ref: '#/components/schemas/ScheduledSession' } },
+                  todo: { type: 'array', items: { $ref: '#/components/schemas/ScheduledSession' } },
+                },
+              },
+            },
+          },
+        },
+      },
+      AssessmentActivityItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          studentId: { type: 'string', format: 'uuid' },
+          studentName: { type: 'string', nullable: true, description: 'Only present on the admin system-wide feed' },
+          interactiveElementId: { type: 'string', format: 'uuid' },
+          scheduledSessionId: { type: 'string', format: 'uuid' },
+          interactionType: { type: 'string' },
+          resourceTitle: { type: 'string', nullable: true },
+          topicTitle: { type: 'string', nullable: true },
+          studentResponse: { type: 'object', additionalProperties: true },
+          isCorrect: { type: 'boolean' },
+          scoreAwarded: { type: 'integer' },
+          submittedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      AssessmentStats: {
+        type: 'object',
+        properties: {
+          totalSubmissions: { type: 'integer' },
+          correctSubmissions: { type: 'integer' },
+          accuracyPercent: { type: 'integer' },
+          averageScore: { type: 'integer' },
+        },
+      },
     },
   },
   paths: {

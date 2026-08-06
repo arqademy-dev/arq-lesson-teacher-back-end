@@ -107,4 +107,40 @@ export class LearningPlanService {
   async listPlansForStudent(studentId: string) {
     return db.select().from(learningPlans).where(eq(learningPlans.studentId, studentId));
   }
+
+  async getStudentPlanBreakdown(studentId: string) {
+    const plans = await db.select().from(learningPlans).where(eq(learningPlans.studentId, studentId));
+
+    return Promise.all(
+      plans.map(async (plan) => {
+        const planTopics = await db
+          .select()
+          .from(learningPlanTopics)
+          .where(eq(learningPlanTopics.learningPlanId, plan.id))
+          .orderBy(learningPlanTopics.sequenceOrder);
+
+        const topicsBreakdown = await Promise.all(
+          planTopics.map(async (lpt) => {
+            const [topic] = await db.select().from(topics).where(eq(topics.id, lpt.topicId)).limit(1);
+            const sessions = await db
+              .select()
+              .from(scheduledSessions)
+              .where(eq(scheduledSessions.learningPlanTopicId, lpt.id))
+              .orderBy(scheduledSessions.sessionDayNumber);
+
+            return {
+              topicId: lpt.topicId,
+              topicTitle: topic?.title,
+              status: lpt.status,
+              done: sessions.filter((s) => s.isCompleted),
+              todo: sessions.filter((s) => !s.isCompleted),
+            };
+          })
+        );
+
+        return { planId: plan.id, status: plan.status, startDate: plan.startDate, topics: topicsBreakdown };
+      })
+    );
+  }
+
 }

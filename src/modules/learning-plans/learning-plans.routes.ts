@@ -13,5 +13,6 @@ router.use(authenticate, requireRole('educator'), requireApprovedEducator);
 router.post('/', validateBody(createLearningPlanSchema), controller.create);
 router.get('/:id', controller.getOne);
 router.get('/student/:studentId', controller.listForStudent);
+router.get('/student/:studentId/breakdown', controller.getStudentPlanBreakdown);
 
 export { router as learningPlanRoutes };
