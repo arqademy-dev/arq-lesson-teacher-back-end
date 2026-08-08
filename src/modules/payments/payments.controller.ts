@@ -70,4 +70,12 @@ export class PaymentController {
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
     return res.json({ message: 'Payment rejected', payment });
   }
+
+  async myPayments(req: Request, res: Response) {
+    const studentProfile = await paymentService.getStudentProfileByUserId(req.user!.id);
+    if (!studentProfile) return res.status(404).json({ message: 'Student profile not found' });
+
+    const list = await paymentService.listPaymentsForStudent(studentProfile.id);
+    return res.json(list);
+  }
 }

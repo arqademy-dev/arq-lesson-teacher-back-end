@@ -1104,6 +1104,20 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/students/me/payments': {
+      get: {
+        summary: 'List the logged-in student\'s own payment history',
+        tags: ['Payments'],
+        security: [{ cookieAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of payments for this student',
+            content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Payment' } } } },
+          },
+          '404': { description: 'Student profile not found' },
+        },
+      },
+    },
     '/api/admin/payments/pending': {
       get: {
         summary: 'List payments awaiting manual approval',

@@ -86,4 +86,8 @@ export class PaymentService {
     const [updated] = await db.update(payments).set({ status: 'failed' }).where(eq(payments.id, id)).returning();
     return updated || null;
   }
+
+  async listPaymentsForStudent(studentId: string) {
+    return db.select().from(payments).where(eq(payments.studentId, studentId));
+  }
 }
