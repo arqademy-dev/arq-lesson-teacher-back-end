@@ -91,3 +91,4 @@ export class PaymentService {
     return db.select().from(payments).where(eq(payments.studentId, studentId));
   }
 }
+
