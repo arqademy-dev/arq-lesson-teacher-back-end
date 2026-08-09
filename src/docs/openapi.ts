@@ -1104,7 +1104,7 @@ export const openApiDocument = {
         },
       },
     },
-    '/api/students/me/payments': {
+    '/api/students/payments/me': {
       get: {
         summary: 'List the logged-in student\'s own payment history',
         tags: ['Payments'],
