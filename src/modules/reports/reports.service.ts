@@ -1,11 +1,29 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../config/db.js';
-import { students, learningPlans, learningPlanTopics, scheduledSessions, studentInteractionLogs, topics, payments, interactiveElements } from '../../db/schema.js';
+import { students, users, learningPlans, learningPlanTopics, scheduledSessions, studentInteractionLogs, topics, payments, interactiveElements } from '../../db/schema.js';
 
 export class ReportsService {
-  async getStudentReport(studentId: string) {
-    const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
-    if (!student) return null;
+  async getStudentReport(studentId: string, preFetchedStudent?: any) {
+    let studentProfile = preFetchedStudent;
+
+    // Fallback join if the student data wasn't passed down from the controller directly
+    if (!studentProfile) {
+      const [found] = await db
+        .select({
+          id: students.id,
+          academicLevel: students.academicLevel,
+          enrollmentDate: students.enrollmentDate,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        })
+        .from(students)
+        .innerJoin(users, eq(students.userId, users.id))
+        .where(eq(students.id, studentId))
+        .limit(1);
+        
+      if (!found) return null;
+      studentProfile = found;
+    }
 
     const plans = await db.select().from(learningPlans).where(eq(learningPlans.studentId, studentId));
 
@@ -43,7 +61,13 @@ export class ReportsService {
     }
 
     return {
-      student: { id: student.id, academicLevel: student.academicLevel, enrollmentDate: student.enrollmentDate },
+      student: { 
+        id: studentProfile.id, 
+        firstName: studentProfile.firstName, 
+        lastName: studentProfile.lastName, 
+        academicLevel: studentProfile.academicLevel, 
+        enrollmentDate: studentProfile.enrollmentDate 
+      },
       learningPlans: planDetails,
       assessmentSummary: {
         totalSubmissions,

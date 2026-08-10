@@ -49,15 +49,45 @@ export class StudentService {
   }
 
   async listStudentsForEducator(educatorId: string) {
-    return db.select().from(students).where(eq(students.educatorId, educatorId));
+    return db
+      .select({
+        id: students.id,
+        userId: students.userId,
+        educatorId: students.educatorId,
+        enrollmentDate: students.enrollmentDate,
+        academicLevel: students.academicLevel,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
+      .from(students)
+      .innerJoin(users, eq(students.userId, users.id))
+      .where(eq(students.educatorId, educatorId));
   }
 
   async getStudentBelongingToEducator(studentId: string, educatorId: string) {
     const [student] = await db
-      .select()
+      .select({
+        id: students.id,
+        userId: students.userId,
+        educatorId: students.educatorId,
+        enrollmentDate: students.enrollmentDate,
+        academicLevel: students.academicLevel,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+      })
       .from(students)
-      .where(and(eq(students.id, studentId), eq(students.educatorId, educatorId)))
+      .innerJoin(users, eq(students.userId, users.id))
+      .where(
+        and(
+          eq(students.id, studentId), 
+          eq(students.educatorId, educatorId)
+        )
+      )
       .limit(1);
+
     return student || null;
   }
+
 }
