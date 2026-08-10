@@ -7,12 +7,6 @@ export const createLearningPlanSchema = z.object({
   sessionsPerWeek: z.number().int().min(1).max(7),
   preferredDays: z.array(weekdayEnum).min(1),
   startDate: z.string().refine((v) => !isNaN(Date.parse(v)), 'Invalid date'),
-  topics: z
-    .array(
-      z.object({
-        topicId: z.string().uuid(),
-        customDurationDays: z.number().int().positive().optional(),
-      })
-    )
-    .min(1),
+  requireCorrectAnswersToProgress: z.boolean().optional().default(true), // NEW
+  topics: z.array(z.object({ topicId: z.string().uuid(), customDurationDays: z.number().int().positive().optional() })).min(1),
 });

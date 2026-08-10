@@ -11,6 +11,7 @@ export class LearningPlanService {
       sessionsPerWeek: number;
       preferredDays: string[];
       startDate: string;
+      requireCorrectAnswersToProgress?: boolean;
       topics: { topicId: string; customDurationDays?: number }[];
     }
   ) {
@@ -22,6 +23,7 @@ export class LearningPlanService {
         sessionsPerWeek: data.sessionsPerWeek,
         preferredDays: data.preferredDays,
         startDate: data.startDate,
+        requireCorrectAnswersToProgress: data.requireCorrectAnswersToProgress ?? true, // NEW
         status: 'active',
       })
       .returning();

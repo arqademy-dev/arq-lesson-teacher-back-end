@@ -64,21 +64,30 @@ export class DailyService {
     return null; // no active, paid, incomplete session found
   }
 
-  async completeSession(studentId: string, sessionId: string) {
-    // Verify this session belongs to the student and is genuinely the current (earliest incomplete) one
-    const current = await this.getCurrentSession(studentId);
-    if (!current || current.session.id !== sessionId) {
-      throw new Error('This is not your current active session, or it is already completed');
+    async completeSession(studentId: string, sessionId: string) {
+      const current = await this.getCurrentSession(studentId);
+      if (!current || current.session.id !== sessionId) {
+        throw new Error('This is not your current active session, or it is already completed');
+      }
+
+      const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, current.learningPlanId)).limit(1);
+      const requireCorrect = plan?.requireCorrectAnswersToProgress ?? true;
+
+      if (requireCorrect) {
+        const allElementIds = current.resources.flatMap((r) => r.interactiveElements.map((ie: any) => ie.id));
+        if (allElementIds.length > 0) {
+          const logs = await db.select().from(studentInteractionLogs).where(eq(studentInteractionLogs.scheduledSessionId, sessionId));
+          const correctIds = new Set(logs.filter((l) => l.isCorrect).map((l) => l.interactiveElementId));
+          const missing = allElementIds.filter((id) => !correctIds.has(id));
+          if (missing.length > 0) {
+            throw new Error(`Cannot advance yet — ${missing.length} interactive element(s) still need a correct answer.`);
+          }
+        }
+      }
+
+      const [updated] = await db.update(scheduledSessions).set({ isCompleted: true }).where(eq(scheduledSessions.id, sessionId)).returning();
+      return updated;
     }
-
-    const [updated] = await db
-      .update(scheduledSessions)
-      .set({ isCompleted: true })
-      .where(eq(scheduledSessions.id, sessionId))
-      .returning();
-
-    return updated;
-  }
 
   async submitInteraction(
     studentId: string,
@@ -87,8 +96,20 @@ export class DailyService {
     const [element] = await db.select().from(interactiveElements).where(eq(interactiveElements.id, data.interactiveElementId)).limit(1);
     if (!element) throw new Error('Interactive element not found');
 
+    const priorAttempts = await db
+      .select()
+      .from(studentInteractionLogs)
+      .where(
+        and(
+          eq(studentInteractionLogs.studentId, studentId),
+          eq(studentInteractionLogs.interactiveElementId, data.interactiveElementId),
+          eq(studentInteractionLogs.scheduledSessionId, data.scheduledSessionId)
+        )
+      );
+    const attemptNumber = priorAttempts.length + 1;
+
     const isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
-    const scoreAwarded = isCorrect ? 10 : 0; // flat scoring for now — can be made configurable per element later
+    const scoreAwarded = isCorrect ? 10 : 0;
 
     const [log] = await db
       .insert(studentInteractionLogs)
@@ -99,9 +120,10 @@ export class DailyService {
         studentResponse: data.response,
         isCorrect,
         scoreAwarded,
+        attemptNumber,
       })
       .returning();
 
-    return { isCorrect, scoreAwarded, log };
+    return { isCorrect, scoreAwarded, attemptNumber, log };
   }
 }

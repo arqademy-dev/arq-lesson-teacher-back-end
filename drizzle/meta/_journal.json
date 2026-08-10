@@ -36,6 +36,13 @@
       "when": 1785833380265,
       "tag": "0004_dapper_master_mold",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786282953481,
+      "tag": "0005_bright_mac_gargan",
+      "breakpoints": true
     }
   ]
 }

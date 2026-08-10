@@ -187,6 +187,7 @@ export const openApiDocument = {
           startDate: { type: 'string', format: 'date' },
           endDate: { type: 'string', format: 'date', nullable: true },
           status: { type: 'string', enum: ['active', 'completed', 'paused', 'cancelled'] },
+          requireCorrectAnswersToProgress: { type: 'boolean', description: 'If true (default), a student must answer every interactive element correctly before a session can be marked complete. If false, they can advance regardless of correctness.' },
           createdAt: { type: 'string', format: 'date-time' },
           topics: { type: 'array', items: { $ref: '#/components/schemas/LearningPlanTopic' } },
         },
@@ -254,6 +255,7 @@ export const openApiDocument = {
         properties: {
           isCorrect: { type: 'boolean' },
           scoreAwarded: { type: 'integer' },
+          attemptNumber: { type: 'integer', description: 'Which try this was for this interactive element within this session — 1 on the first attempt, 2 on the second, etc.' },
           log: {
             type: 'object',
             properties: {
@@ -265,6 +267,7 @@ export const openApiDocument = {
               isCorrect: { type: 'boolean' },
               scoreAwarded: { type: 'integer' },
               submittedAt: { type: 'string', format: 'date-time' },
+              attemptNumber: { type: 'integer', description: 'Which try this was for this interactive element within this session — 1 on the first attempt, 2 on the second, etc.' },
             },
           },
         },
@@ -996,6 +999,11 @@ export const openApiDocument = {
                     items: { type: 'string', enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] },
                   },
                   startDate: { type: 'string', format: 'date' },
+                  requireCorrectAnswersToProgress: {
+                    type: 'boolean',
+                    default: true,
+                    description: 'Whether a student must answer every interactive element correctly before advancing to the next day. Defaults to true.',
+                  },
                   topics: {
                     type: 'array',
                     items: {

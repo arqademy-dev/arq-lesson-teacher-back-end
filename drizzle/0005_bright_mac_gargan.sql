@@ -1,0 +1,2 @@
+ALTER TABLE "learning_plans" ADD COLUMN "require_correct_answers_to_progress" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+ALTER TABLE "student_interaction_logs" ADD COLUMN "attempt_number" integer NOT NULL;

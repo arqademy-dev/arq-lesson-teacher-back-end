@@ -121,6 +121,7 @@ export const learningPlans = pgTable('learning_plans', {
   startDate: date('start_date').notNull(),
   endDate: date('end_date'),
   status: learningPlanStatusEnum('status').default('active').notNull(),
+  requireCorrectAnswersToProgress: boolean('require_correct_answers_to_progress').default(true).notNull(), // NEW
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -179,9 +180,11 @@ export const studentInteractionLogs = pgTable('student_interaction_logs', {
   studentResponse: jsonb('student_response').$type<Record<string, any>>().notNull(),
   isCorrect: boolean('is_correct').notNull(),
   scoreAwarded: integer('score_awarded').default(0).notNull(),
+  attemptNumber: integer('attempt_number').notNull(), // NEW — which try this was for this element+session
   timeSpentSeconds: integer('time_spent_seconds'),
   submittedAt: timestamp('submitted_at').defaultNow().notNull(),
 });
+
 
 // ==========================================
 // 7. DRIZZLE RELATIONAL TYPE MAPS
