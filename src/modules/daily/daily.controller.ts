@@ -47,4 +47,14 @@ export class DailyController {
       return res.status(400).json({ message: err.message });
     }
   }
+
+  async getSessionSubmissions(req: Request, res: Response) {
+    const studentId = await getStudentId(req.user!.id);
+    const sessionId = req.params.sessionId as string | undefined;
+    if (!studentId) return res.status(404).json({ message: 'Student profile not found' });
+
+    const submissions = await dailyService.getSubmissionsForSession(studentId, sessionId?.toString() || '');
+    if (submissions === null) return res.status(404).json({ message: 'Session not found or does not belong to you' });
+    return res.json(submissions);
+  }
 }

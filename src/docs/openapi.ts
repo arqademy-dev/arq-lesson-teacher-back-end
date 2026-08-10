@@ -238,6 +238,8 @@ export const openApiDocument = {
           session: { $ref: '#/components/schemas/ScheduledSession' },
           isOverdue: { type: 'boolean', description: 'True if this session\'s scheduledDate is in the past — student missed a day and must catch up.' },
           topic: { $ref: '#/components/schemas/Topic' },
+          requireCorrectAnswersToProgress: { type: 'boolean', description: 'Whether every interactive element needs a correct answer before this session can be marked complete.' },
+          submissions: { type: 'array', items: { $ref: '#/components/schemas/SessionSubmission' }, description: 'Latest submission per interactive element for this session — use to pre-fill answers and lock/unlock retry state after a page refresh.' },
           learningPlanId: { type: 'string', format: 'uuid' },
           resources: {
             type: 'array',
@@ -270,6 +272,17 @@ export const openApiDocument = {
               attemptNumber: { type: 'integer', description: 'Which try this was for this interactive element within this session — 1 on the first attempt, 2 on the second, etc.' },
             },
           },
+        },
+      },
+      SessionSubmission: {
+        type: 'object',
+        properties: {
+          interactiveElementId: { type: 'string', format: 'uuid' },
+          studentResponse: { type: 'object', additionalProperties: true },
+          isCorrect: { type: 'boolean' },
+          scoreAwarded: { type: 'integer' },
+          attemptNumber: { type: 'integer' },
+          submittedAt: { type: 'string', format: 'date-time' },
         },
       },
       PresignedUploadResponse: {
@@ -1181,6 +1194,18 @@ export const openApiDocument = {
         responses: {
           '200': { description: 'Session marked complete', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, session: { $ref: '#/components/schemas/ScheduledSession' } } } } } },
           '400': { description: 'This is not the student\'s current session, or it is already completed' },
+        },
+      },
+    },
+    '/api/students/me/sessions/{sessionId}/submissions': {
+      get: {
+        summary: 'Get the latest submission per interactive element for a specific session (refresh-safe answer restore)',
+        tags: ['Student - Daily Workflow'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'List of latest submissions for this session', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/SessionSubmission' } } } } },
+          '404': { description: 'Session not found, or does not belong to this student' },
         },
       },
     },
