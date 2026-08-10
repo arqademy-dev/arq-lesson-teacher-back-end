@@ -12,31 +12,39 @@ import {
 const router = Router();
 const controller = new CurriculumController();
 
-// Every route here is admin-only
-router.use(authenticate, requireRole('admin'));
+// 🔒 FORCE AUTHENTICATION FOR EVERYONE (Admin & Educator must be logged in)
+router.use(authenticate);
 
-router.post('/subjects', validateBody(createSubjectSchema), controller.createSubject);
-router.get('/subjects', controller.listSubjects);
-router.get('/subjects/:id', controller.getSubject);
-router.patch('/subjects/:id', validateBody(updateSubjectSchema), controller.updateSubject);
-router.delete('/subjects/:id', controller.deleteSubject);
+// --- 📚 SUBJECTS ---
+// Admins manage, Educators can view
+router.post('/subjects', requireRole('admin'), validateBody(createSubjectSchema), controller.createSubject);
+router.get('/subjects', requireRole('admin', 'educator'), controller.listSubjects);
+router.get('/subjects/:id', requireRole('admin', 'educator'), controller.getSubject);
+router.patch('/subjects/:id', requireRole('admin'), validateBody(updateSubjectSchema), controller.updateSubject);
+router.delete('/subjects/:id', requireRole('admin'), controller.deleteSubject);
 
-router.post('/subjects/:subjectId/classes', validateBody(createClassSchema), controller.createClass);
-router.get('/subjects/:subjectId/classes', controller.listClasses);
-router.get('/classes/:id', controller.getClass);
-router.patch('/classes/:id', validateBody(updateClassSchema), controller.updateClass);
-router.delete('/classes/:id', controller.deleteClass);
+// --- 🏫 CLASSES ---
+// Admins manage, Educators can view
+router.post('/subjects/:subjectId/classes', requireRole('admin'), validateBody(createClassSchema), controller.createClass);
+router.get('/subjects/:subjectId/classes', requireRole('admin', 'educator'), controller.listClasses);
+router.get('/classes/:id', requireRole('admin', 'educator'), controller.getClass);
+router.patch('/classes/:id', requireRole('admin'), validateBody(updateClassSchema), controller.updateClass);
+router.delete('/classes/:id', requireRole('admin'), controller.deleteClass);
 
-router.post('/classes/:classId/topics', validateBody(createTopicSchema), controller.createTopic);
-router.get('/classes/:classId/topics', controller.listTopics);
-router.get('/topics/:id', controller.getTopic);
-router.patch('/topics/:id', validateBody(updateTopicSchema), controller.updateTopic);
-router.delete('/topics/:id', controller.deleteTopic);
+// --- 📝 TOPICS ---
+// Admins manage, Educators can view
+router.post('/classes/:classId/topics', requireRole('admin'), validateBody(createTopicSchema), controller.createTopic);
+router.get('/classes/:classId/topics', requireRole('admin', 'educator'), controller.listTopics);
+router.get('/topics/:id', requireRole('admin', 'educator'), controller.getTopic);
+router.patch('/topics/:id', requireRole('admin'), validateBody(updateTopicSchema), controller.updateTopic);
+router.delete('/topics/:id', requireRole('admin'), controller.deleteTopic);
 
-router.post('/topics/:topicId/resources', validateBody(createResourceSchema), controller.createResource);
-router.get('/topics/:topicId/resources', controller.listResources);
-router.get('/resources/:id', controller.getResource);
-router.patch('/resources/:id', validateBody(updateResourceSchema), controller.updateResource);
-router.delete('/resources/:id', controller.deleteResource);
+// --- 📂 RESOURCES ---
+// BOTH Admin and Educator can fully manage resources
+router.post('/topics/:topicId/resources', requireRole('admin', 'educator'), validateBody(createResourceSchema), controller.createResource);
+router.get('/topics/:topicId/resources', requireRole('admin', 'educator'), controller.listResources);
+router.get('/resources/:id', requireRole('admin', 'educator'), controller.getResource);
+router.patch('/resources/:id', requireRole('admin', 'educator'), validateBody(updateResourceSchema), controller.updateResource);
+router.delete('/resources/:id', requireRole('admin', 'educator'), controller.deleteResource);
 
 export { router as curriculumRoutes };
