@@ -8,5 +8,6 @@ const controller = new AdminStudentsController();
 router.use(authenticate, requireRole('admin'));
 router.get('/', controller.listAll);
 router.get('/:studentId/learning-history', controller.getLearningHistory);
+router.get('/:studentId/full-profile', controller.getFullProfile);
 
 export { router as adminStudentsRoutes };

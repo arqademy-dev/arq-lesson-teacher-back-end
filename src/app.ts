@@ -27,6 +27,7 @@ import { studentDashboardRoutes } from './modules/dashboard/student-dashboard.ro
 import { adminReportRoutes, educatorReportRoutes, studentReportRoutes } from './modules/reports/reports.routes.js';
 import { adminStudentsRoutes } from './modules/admin/admin-students.routes.js';
 
+import { adminLearningPlansRoutes } from './modules/admin/admin-learning-plans.routes.js';
 
 export const app = express();
 
@@ -67,6 +68,8 @@ app.use('/api/admin/curriculum', curriculumRoutes);
 app.use('/api/admin/curriculum', interactiveRoutes);
 app.use('/api/admin/students', adminStudentsRoutes);
 app.use('/api/admin/students', adminReportRoutes);
+
+app.use('/api/admin/learning-plans', adminLearningPlansRoutes);
 
 app.use('/api/educators/students', studentsRoutes);
 app.use('/api/educators/learning-plans', learningPlanRoutes);

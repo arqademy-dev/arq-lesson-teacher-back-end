@@ -13,4 +13,10 @@ export class AdminStudentsController {
     if (!history) return res.status(404).json({ message: 'Student not found' });
     return res.json(history);
   }
+  async getFullProfile(req: Request, res: Response) {
+    const { studentId } = req.params as { studentId: string };
+    const profile = await service.getStudentFullProfile(studentId);
+    if (!profile) return res.status(404).json({ message: 'Student not found' });
+    return res.json(profile);
+  }
 }

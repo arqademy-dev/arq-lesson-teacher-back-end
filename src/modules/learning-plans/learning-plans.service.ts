@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import { learningPlans, learningPlanTopics, scheduledSessions, topics } from '../../db/schema.js';
 import { getNextSessionDates } from '../../utils/scheduling.js';
@@ -140,9 +140,53 @@ export class LearningPlanService {
           })
         );
 
-        return { planId: plan.id, status: plan.status, startDate: plan.startDate, topics: topicsBreakdown };
+        return {
+          planId: plan.id,
+          status: plan.status,
+          startDate: plan.startDate,
+          endDate: plan.endDate,                                             // NEW
+          requireCorrectAnswersToProgress: plan.requireCorrectAnswersToProgress, // NEW
+          topics: topicsBreakdown,
+        };
       })
     );
+  }
+
+  async getPlanOwnedByEducator(planId: string, educatorId: string) {
+    const [plan] = await db
+      .select()
+      .from(learningPlans)
+      .where(and(eq(learningPlans.id, planId), eq(learningPlans.educatorId, educatorId)))
+      .limit(1);
+    return plan || null;
+  }
+
+  async updatePlan(planId: string, data: Partial<{
+    sessionsPerWeek: number;
+    preferredDays: string[];
+    startDate: string;
+    endDate: string | null;
+    status: 'active' | 'completed' | 'paused' | 'cancelled';
+    requireCorrectAnswersToProgress: boolean;
+  }>) {
+    const [updated] = await db.update(learningPlans).set(data as any).where(eq(learningPlans.id, planId)).returning();
+    return updated || null;
+  }
+
+  async getSessionWithPlan(sessionId: string) {
+    const [session] = await db.select().from(scheduledSessions).where(eq(scheduledSessions.id, sessionId)).limit(1);
+    if (!session) return null;
+
+    const [lpt] = await db.select().from(learningPlanTopics).where(eq(learningPlanTopics.id, session.learningPlanTopicId)).limit(1);
+    if (!lpt) return null;
+
+    const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, lpt.learningPlanId)).limit(1);
+    return plan ? { session, plan } : null;
+  }
+
+  async updateSession(sessionId: string, data: Partial<{ scheduledDate: string; sessionDayNumber: number; isCompleted: boolean; educatorNotes: string }>) {
+    const [updated] = await db.update(scheduledSessions).set(data as any).where(eq(scheduledSessions.id, sessionId)).returning();
+    return updated || null;
   }
 
 }

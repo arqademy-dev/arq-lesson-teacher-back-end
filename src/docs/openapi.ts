@@ -441,6 +441,31 @@ export const openApiDocument = {
           },
         },
       },
+      StudentFullProfile: {
+        type: 'object',
+        properties: {
+          student: { $ref: '#/components/schemas/StudentMiniProfile' },
+          educator: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              firstName: { type: 'string' },
+              lastName: { type: 'string' },
+              email: { type: 'string', format: 'email' },
+            },
+          },
+          learningPlans: { $ref: '#/components/schemas/LearningPlanBreakdown' },
+          payments: { type: 'array', items: { $ref: '#/components/schemas/Payment' } },
+          assessments: {
+            type: 'object',
+            properties: {
+              stats: { $ref: '#/components/schemas/AssessmentStats' },
+              activity: { type: 'array', items: { $ref: '#/components/schemas/AssessmentActivityItem' } },
+            },
+          },
+        },
+      },
       LearningPlanBreakdown: {
         type: 'array',
         items: {
@@ -449,6 +474,8 @@ export const openApiDocument = {
             planId: { type: 'string', format: 'uuid' },
             status: { type: 'string' },
             startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date', nullable: true },
+            requireCorrectAnswersToProgress: { type: 'boolean' },
             topics: {
               type: 'array',
               items: {
@@ -464,6 +491,28 @@ export const openApiDocument = {
             },
           },
         },
+      },
+      UpdateLearningPlanInput: {
+        type: 'object',
+        properties: {
+          sessionsPerWeek: { type: 'integer', minimum: 1, maximum: 7 },
+          preferredDays: { type: 'array', items: { type: 'string', enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] } },
+          startDate: { type: 'string', format: 'date' },
+          endDate: { type: 'string', format: 'date', nullable: true },
+          status: { type: 'string', enum: ['active', 'completed', 'paused', 'cancelled'] },
+          requireCorrectAnswersToProgress: { type: 'boolean' },
+        },
+        description: 'All fields optional — send only what you want to change. Note: editing preferredDays or startDate does not retroactively regenerate already-generated scheduledSessions.',
+      },
+      UpdateScheduledSessionInput: {
+        type: 'object',
+        properties: {
+          scheduledDate: { type: 'string', format: 'date' },
+          sessionDayNumber: { type: 'integer' },
+          isCompleted: { type: 'boolean', description: 'Toggle either direction — set to false to reopen a completed session.' },
+          educatorNotes: { type: 'string' },
+        },
+        description: 'All fields optional — send only what you want to change.',
       },
       AssessmentActivityItem: {
         type: 'object',
@@ -1047,7 +1096,32 @@ export const openApiDocument = {
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '200': { description: 'Learning plan', content: { 'application/json': { schema: { $ref: '#/components/schemas/LearningPlan' } } } }, '404': { description: 'Not found' } },
       },
+      patch: {
+        summary: 'Edit a learning plan (schedule config, status, strict-mode flag) — own students only',
+        tags: ['Educator - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateLearningPlanInput' } } } },
+        responses: {
+          '200': { description: 'Updated learning plan with full schedule', content: { 'application/json': { schema: { $ref: '#/components/schemas/LearningPlan' } } } },
+          '404': { description: 'Learning plan not found' },
+        },
+      },
     },
+    '/api/educators/learning-plans/sessions/{sessionId}': {
+      patch: {
+        summary: 'Edit a single scheduled session (date, completion status, notes) — own students only',
+        tags: ['Educator - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateScheduledSessionInput' } } } },
+        responses: {
+          '200': { description: 'Session updated', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, session: { $ref: '#/components/schemas/ScheduledSession' } } } } } },
+          '404': { description: 'Session not found' },
+        },
+      },
+    },
+    
     '/api/educators/learning-plans/student/{studentId}': {
       get: {
         summary: 'List all learning plans for a specific student of mine',
@@ -1171,6 +1245,32 @@ export const openApiDocument = {
         security: [{ cookieAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '200': { description: 'Payment rejected', content: { 'application/json': { schema: { $ref: '#/components/schemas/Payment' } } } }, '404': { description: 'Not found' } },
+      },
+    },
+    '/api/admin/learning-plans/{id}': {
+      patch: {
+        summary: 'Edit any learning plan (schedule config, status, strict-mode flag) — admin override',
+        tags: ['Admin - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateLearningPlanInput' } } } },
+        responses: {
+          '200': { description: 'Updated learning plan with full schedule', content: { 'application/json': { schema: { $ref: '#/components/schemas/LearningPlan' } } } },
+          '404': { description: 'Learning plan not found' },
+        },
+      },
+    },
+    '/api/admin/learning-plans/sessions/{sessionId}': {
+      patch: {
+        summary: 'Edit any scheduled session (date, completion status, notes) — admin override',
+        tags: ['Admin - Learning Plans'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateScheduledSessionInput' } } } },
+        responses: {
+          '200': { description: 'Session updated', content: { 'application/json': { schema: { type: 'object', properties: { message: { type: 'string' }, session: { $ref: '#/components/schemas/ScheduledSession' } } } } } },
+          '404': { description: 'Session not found' },
+        },
       },
     },
 
@@ -1300,6 +1400,18 @@ export const openApiDocument = {
           '404': { description: 'Student not found' },
         },
       },
+      '/api/admin/students/{studentId}/full-profile': {
+      get: {
+        summary: 'Full consolidated student profile — identity, educator, all learning plans with editable session ids, payments, and assessment history in one call',
+        tags: ['Admin - Students'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Full student profile', content: { 'application/json': { schema: { $ref: '#/components/schemas/StudentFullProfile' } } } },
+          '404': { description: 'Student not found' },
+        },
+      },
+    },
     },
     '/api/educators/students/{studentId}/report': {
       get: {

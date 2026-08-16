@@ -3,7 +3,7 @@ import { LearningPlanController } from './learning-plans.controller.js';
 import { authenticate, requireRole } from '../../middleware/auth.middleware.js';
 import { requireApprovedEducator } from '../../middleware/educator.middleware.js';
 import { validateBody } from '../../middleware/validate.middleware.js';
-import { createLearningPlanSchema } from './learning-plans.validation.js';
+import { createLearningPlanSchema, updateLearningPlanSchema, updateScheduledSessionSchema } from './learning-plans.validation.js';
 
 const router = Router();
 const controller = new LearningPlanController();
@@ -15,5 +15,8 @@ router.get('/:id', controller.getOne);
 router.get('/student/:studentId', controller.listForStudent);
 router.get('/student/:studentId/breakdown', controller.getStudentPlanBreakdown);
 
+// ...existing routes...
+router.patch('/:id', validateBody(updateLearningPlanSchema), controller.updatePlan);
+router.patch('/sessions/:sessionId', validateBody(updateScheduledSessionSchema), controller.updateSession);
 
 export { router as learningPlanRoutes };
