@@ -111,43 +111,46 @@ export class DailyService {
       return updated;
     }
 
-  async submitInteraction(
-    studentId: string,
-    data: { interactiveElementId: string; scheduledSessionId: string; response: Record<string, any> }
-  ) {
-    const [element] = await db.select().from(interactiveElements).where(eq(interactiveElements.id, data.interactiveElementId)).limit(1);
-    if (!element) throw new Error('Interactive element not found');
 
-    const priorAttempts = await db
-      .select()
-      .from(studentInteractionLogs)
-      .where(
-        and(
-          eq(studentInteractionLogs.studentId, studentId),
-          eq(studentInteractionLogs.interactiveElementId, data.interactiveElementId),
-          eq(studentInteractionLogs.scheduledSessionId, data.scheduledSessionId)
-        )
-      );
-    const attemptNumber = priorAttempts.length + 1;
+    async submitInteraction(
+      studentId: string,
+      data: { interactiveElementId: string; scheduledSessionId: string; response: Record<string, any> }
+    ) {
+      const [element] = await db.select().from(interactiveElements).where(eq(interactiveElements.id, data.interactiveElementId)).limit(1);
+      if (!element) throw new Error('Interactive element not found');
 
-    const isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
-    const scoreAwarded = isCorrect ? 10 : 0;
+      const priorAttempts = await db
+        .select()
+        .from(studentInteractionLogs)
+        .where(
+          and(
+            eq(studentInteractionLogs.studentId, studentId),
+            eq(studentInteractionLogs.interactiveElementId, data.interactiveElementId),
+            eq(studentInteractionLogs.scheduledSessionId, data.scheduledSessionId)
+          )
+        );
+      const attemptNumber = priorAttempts.length + 1;
 
-    const [log] = await db
-      .insert(studentInteractionLogs)
-      .values({
-        studentId,
-        interactiveElementId: data.interactiveElementId,
-        scheduledSessionId: data.scheduledSessionId,
-        studentResponse: data.response,
-        isCorrect,
-        scoreAwarded,
-        attemptNumber,
-      })
-      .returning();
+      let isCorrect: boolean;
+      let scoreAwarded: number;
 
-    return { isCorrect, scoreAwarded, attemptNumber, log };
-  }
+      if (element.interactionType === 'file_upload') {
+        // No auto-grading — submitting content is itself the completion criterion.
+        const hasContent = !!(data.response?.fileUrl || data.response?.textNote);
+        isCorrect = hasContent;
+        scoreAwarded = 0; // educator reviews manually; no auto-score for uploads
+      } else {
+        isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
+        scoreAwarded = isCorrect ? 10 : 0;
+      }
+
+      const [log] = await db
+        .insert(studentInteractionLogs)
+        .values({ studentId, interactiveElementId: data.interactiveElementId, scheduledSessionId: data.scheduledSessionId, studentResponse: data.response, isCorrect, scoreAwarded, attemptNumber })
+        .returning();
+
+      return { isCorrect, scoreAwarded, attemptNumber, log };
+    }
 
   async getSubmissionsForSession(studentId: string, sessionId: string) {
       const [session] = await db.select().from(scheduledSessions).where(eq(scheduledSessions.id, sessionId)).limit(1);
@@ -178,4 +181,7 @@ export class DailyService {
         submittedAt: log.submittedAt,
       }));
     }
+
+    
+
 }

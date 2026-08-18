@@ -43,6 +43,13 @@
       "when": 1786282953481,
       "tag": "0005_bright_mac_gargan",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787017383993,
+      "tag": "0006_lucky_galactus",
+      "breakpoints": true
     }
   ]
 }

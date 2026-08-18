@@ -20,7 +20,7 @@ import { studentAuthRoutes } from './modules/students/students-auth.routes.js';
 import { studentPaymentRoutes, adminPaymentRoutes } from './modules/payments/payments.routes.js';
 import { dailyRoutes } from './modules/daily/daily.routes.js';
 
-import { filesRoutes } from './modules/files/files.routes.js';
+import { filesRoutes, studentFilesRoutes } from './modules/files/files.routes.js';
 import { adminDashboardRoutes } from './modules/dashboard/admin-dashboard.routes.js';
 import { educatorDashboardRoutes } from './modules/dashboard/educator-dashboard.routes.js';
 import { studentDashboardRoutes } from './modules/dashboard/student-dashboard.routes.js';
@@ -70,6 +70,9 @@ app.use('/api/admin/students', adminStudentsRoutes);
 app.use('/api/admin/students', adminReportRoutes);
 
 app.use('/api/admin/learning-plans', adminLearningPlansRoutes);
+
+app.use('/api/admin/files', filesRoutes);
+app.use('/api/students/me/files', studentFilesRoutes);
 
 app.use('/api/educators/students', studentsRoutes);
 app.use('/api/educators/learning-plans', learningPlanRoutes);
