@@ -24,7 +24,7 @@ export const updateTopicSchema = createTopicSchema.partial();
 
 export const createResourceSchema = z.object({
   title: z.string().min(1).max(100),
-  resourceType: z.enum(['video', 'pdf', 'article', 'image', 'interactive', 'quiz']),
+  resourceType: z.enum(['video', 'pdf', 'article', 'image', 'interactive', 'quiz', 'submission']),
   urlOrPath: z.string().min(1),
   dayNumber: z.number().int().positive(),
   sortOrder: z.number().int().nonnegative(),
