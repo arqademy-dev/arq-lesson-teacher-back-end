@@ -540,6 +540,50 @@ export const openApiDocument = {
           averageScore: { type: 'integer' },
         },
       },
+          BatchPresignedUploadRequest: {
+        type: 'object',
+        required: ['files'],
+        properties: {
+          files: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 10,
+            items: { type: 'object', properties: { fileName: { type: 'string' }, contentType: { type: 'string' } } },
+          },
+        },
+      },
+      BatchPresignedUploadResponse: {
+        type: 'object',
+        properties: { files: { type: 'array', items: { $ref: '#/components/schemas/PresignedUploadResponse' } } },
+      },
+      FileHistoryFile: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          response: { type: 'object', additionalProperties: true },
+          attemptNumber: { type: 'integer' },
+          submittedAt: { type: 'string', format: 'date-time' },
+          resourceId: { type: 'string', format: 'uuid', nullable: true },
+          resourceTitle: { type: 'string', nullable: true },
+        },
+      },
+      FileHistorySession: {
+        type: 'object',
+        properties: {
+          sessionId: { type: 'string', format: 'uuid', nullable: true },
+          scheduledDate: { type: 'string', format: 'date', nullable: true },
+          sessionDayNumber: { type: 'integer', nullable: true },
+          files: { type: 'array', items: { $ref: '#/components/schemas/FileHistoryFile' } },
+        },
+      },
+      FileHistoryTopicGroup: {
+        type: 'object',
+        properties: {
+          topicId: { type: 'string', format: 'uuid', nullable: true },
+          topicTitle: { type: 'string', nullable: true },
+          sessions: { type: 'array', items: { $ref: '#/components/schemas/FileHistorySession' } },
+        },
+      },
     },
   },
   paths: {
@@ -1385,6 +1429,44 @@ export const openApiDocument = {
         responses: {
           '200': { description: 'Presigned upload details', content: { 'application/json': { schema: { $ref: '#/components/schemas/PresignedUploadResponse' } } } },
         },
+      },
+    },
+    '/api/students/me/files/presigned-upload-urls': {
+      post: {
+        summary: 'Get multiple presigned R2 upload URLs at once — for sessions requiring more than one file',
+        tags: ['Files'],
+        security: [{ cookieAuth: [] }],
+        requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/BatchPresignedUploadRequest' } } } },
+        responses: { '200': { description: 'Array of presigned upload details, one per file requested', content: { 'application/json': { schema: { $ref: '#/components/schemas/BatchPresignedUploadResponse' } } } } },
+      },
+    },
+    '/api/students/me/files/history': {
+      get: {
+        summary: 'Get the logged-in student\'s own file upload history, grouped by topic and session',
+        tags: ['Files'],
+        security: [{ cookieAuth: [] }],
+        responses: { '200': { description: 'File history grouped by topic/session', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/FileHistoryTopicGroup' } } } } } },
+      },
+    },
+    '/api/educators/students/{studentId}/files': {
+      get: {
+        summary: 'View a student\'s uploaded files, grouped by topic and session (own students only)',
+        tags: ['Files'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'File history grouped by topic/session', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/FileHistoryTopicGroup' } } } } },
+          '404': { description: 'Student not found' },
+        },
+      },
+    },
+    '/api/admin/students/{studentId}/files': {
+      get: {
+        summary: 'View any student\'s uploaded files, grouped by topic and session (admin access)',
+        tags: ['Files'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'File history grouped by topic/session', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/FileHistoryTopicGroup' } } } } } },
       },
     },
 

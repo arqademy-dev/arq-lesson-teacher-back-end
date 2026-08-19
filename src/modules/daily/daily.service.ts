@@ -135,10 +135,12 @@ export class DailyService {
       let scoreAwarded: number;
 
       if (element.interactionType === 'file_upload') {
-        // No auto-grading — submitting content is itself the completion criterion.
-        const hasContent = !!(data.response?.fileUrl || data.response?.textNote);
-        isCorrect = hasContent;
-        scoreAwarded = 0; // educator reviews manually; no auto-score for uploads
+        const hasFiles = Array.isArray(data.response?.fileUrls) && data.response.fileUrls.length > 0;
+        const hasFile = !!data.response?.fileUrl;
+        const hasText = !!data.response?.textNote;
+        isCorrect = hasFiles || hasFile || hasText;
+        scoreAwarded = 0;
+
       } else {
         isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
         scoreAwarded = isCorrect ? 10 : 0;

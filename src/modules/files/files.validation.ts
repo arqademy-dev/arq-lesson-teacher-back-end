@@ -10,3 +10,7 @@ export const studentPresignedUrlSchema = z.object({
   fileName: z.string().min(1),
   contentType: z.string().min(1),
 });
+
+export const studentBatchPresignedUrlSchema = z.object({
+  files: z.array(z.object({ fileName: z.string().min(1), contentType: z.string().min(1) })).min(1).max(10),
+});

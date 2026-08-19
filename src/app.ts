@@ -28,6 +28,7 @@ import { adminReportRoutes, educatorReportRoutes, studentReportRoutes } from './
 import { adminStudentsRoutes } from './modules/admin/admin-students.routes.js';
 
 import { adminLearningPlansRoutes } from './modules/admin/admin-learning-plans.routes.js';
+import { studentFileHistoryRoutes, educatorFileHistoryRoutes, adminFileHistoryRoutes } from './modules/files/file-history.routes.js';
 
 export const app = express();
 
@@ -89,6 +90,11 @@ app.use('/api/students/me/dashboard', studentDashboardRoutes);
 app.use('/api/admin/students', adminReportRoutes);        // GET /api/admin/students/:studentId/report
 app.use('/api/educators/students', educatorReportRoutes); // GET /api/educators/students/:studentId/report — safe alongside the existing enroll/list routes at this same prefix, since /:id and /:studentId/report never collide
 app.use('/api/students/me', studentReportRoutes);          // GET /api/students/me/report
+
+
+app.use('/api/students/me/files/history', studentFileHistoryRoutes); // GET /api/students/me/files/history
+app.use('/api/educators/students', educatorFileHistoryRoutes);       // GET /api/educators/students/:studentId/files
+app.use('/api/admin/students', adminFileHistoryRoutes);              // GET /api/admin/students/:studentId/files
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });

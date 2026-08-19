@@ -25,4 +25,15 @@ export class FilesController {
       return res.status(500).json({ message: 'Error generating upload URL' });
     }
   }
+
+  async getStudentBatchPresignedUrls(req: Request, res: Response) {
+    const { files } = req.body;
+    try {
+      const results = await filesService.generateBatchUploadUrls(files, 'submissions');
+      return res.status(200).json({ files: results });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Error generating upload URLs' });
+    }
+  }
 }

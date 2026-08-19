@@ -13,4 +13,8 @@ export class FilesService {
 
     return { uploadUrl, publicUrl: `${R2_PUBLIC_URL}/${key}`, key };
   }
+
+  async generateBatchUploadUrls(files: { fileName: string; contentType: string }[], folder: string) {
+  return Promise.all(files.map((f) => this.generateUploadUrl(f.fileName, f.contentType, folder)));
+}
 }
