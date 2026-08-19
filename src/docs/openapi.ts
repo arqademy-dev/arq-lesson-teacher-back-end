@@ -1164,6 +1164,32 @@ export const openApiDocument = {
       },
     },
 
+    '/api/students/me/files/presigned-upload-url': {
+      post: {
+        summary: 'Get a presigned R2 upload URL for a student submission — folder is fixed server-side to "submissions", cannot be overridden by the client',
+        tags: ['Files'],
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['fileName', 'contentType'],
+                properties: {
+                  fileName: { type: 'string', example: 'workings.jpg' },
+                  contentType: { type: 'string', example: 'image/jpeg' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Presigned upload details', content: { 'application/json': { schema: { $ref: '#/components/schemas/PresignedUploadResponse' } } } },
+        },
+      },
+    },
+
     // ================= PAYMENTS =================
     '/api/students/payments/initiate': {
       post: {
