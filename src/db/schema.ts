@@ -52,6 +52,7 @@ export const students = pgTable('students', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
   educatorId: uuid('educator_id').references(() => educators.id).notNull(),
+  classId: uuid('class_id').references(() => classes.id, { onDelete: 'set null' }), // NEW
   enrollmentDate: date('enrollment_date').defaultNow().notNull(),
   academicLevel: varchar('academic_level', { length: 50 }),
 });
@@ -69,7 +70,6 @@ export const subjects = pgTable('subjects', {
 
 export const classes = pgTable('classes', {
   id: uuid('id').defaultRandom().primaryKey(),
-  subjectId: uuid('subject_id').references(() => subjects.id, { onDelete: 'cascade' }).notNull(),
   title: varchar('title', { length: 100 }).notNull(),
   term: varchar('term', { length: 50 }),
   isActive: boolean('is_active').default(true).notNull(),
@@ -77,6 +77,7 @@ export const classes = pgTable('classes', {
 
 export const topics = pgTable('topics', {
   id: uuid('id').defaultRandom().primaryKey(),
+  subjectId: uuid('subject_id').references(() => subjects.id, { onDelete: 'cascade' }), // now required
   classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }).notNull(),
   title: varchar('title', { length: 100 }).notNull(),
   description: text('description'),

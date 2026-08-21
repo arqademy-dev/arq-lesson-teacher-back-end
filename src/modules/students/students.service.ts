@@ -5,8 +5,9 @@ import { users, students } from '../../db/schema.js';
 import { generateArqId, generateTempPassword } from '../../utils/generate-arq-id.js';
 
 export class StudentService {
+
   async enrollStudent(
-    data: { firstName: string; lastName: string; email: string; academicLevel?: string; password?: string },
+    data: { firstName: string; lastName: string; email: string; classId: string; academicLevel?: string; password?: string },
     educatorId: string
   ) {
     const tempPassword = data.password ?? generateTempPassword();
@@ -15,32 +16,15 @@ export class StudentService {
 
     const [newUser] = await db
       .insert(users)
-      .values({
-        email: data.email,
-        password: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: 'student',
-        arqId,
-        verified: false,
-        active: true,
-      })
+      .values({ email: data.email, password: hashedPassword, firstName: data.firstName, lastName: data.lastName, role: 'student', arqId, verified: false, active: true })
       .returning();
 
     const [studentProfile] = await db
       .insert(students)
-      .values({
-        userId: newUser.id,
-        educatorId,
-        academicLevel: data.academicLevel,
-      })
+      .values({ userId: newUser.id, educatorId, classId: data.classId, academicLevel: data.academicLevel }) // classId added
       .returning();
 
-    return {
-      student: studentProfile,
-      user: newUser,
-      generatedPassword: data.password ? null : tempPassword, // only surface it if we generated it
-    };
+    return { student: studentProfile, user: newUser, generatedPassword: data.password ? null : tempPassword };
   }
 
   async findUserByEmail(email: string) {

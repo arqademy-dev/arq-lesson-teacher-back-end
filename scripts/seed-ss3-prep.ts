@@ -24,7 +24,7 @@ async function seedClass(classId: string, weeks: WeekSeed[]) {
 
     const [topicRow] = await db
       .insert(topics)
-      .values({ classId, title: w.title, description: `Weekly focus: ${w.title}`, sortOrder: i + 1, expectedDurationDays: 5 })
+      .values({ subjectId: SHARED_SUBJECT_ID, classId, title: w.title, description: `Weekly focus: ${w.title}`, sortOrder: i + 1, expectedDurationDays: 5 })
       .returning();
 
     // Monday - Thursday: daily practice upload
@@ -35,7 +35,7 @@ async function seedClass(classId: string, weeks: WeekSeed[]) {
           topicId: topicRow.id,
           title: `Day ${day} Practice Upload`,
           resourceType: 'submission',
-          urlOrPath: '',
+          urlOrPath: 'https://www.youtube.com/watch?v=vxhmc_TDL2s',
           dayNumber: day,
           sortOrder: 1,
         })

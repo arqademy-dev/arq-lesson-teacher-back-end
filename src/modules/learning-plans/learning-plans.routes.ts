@@ -6,6 +6,7 @@ import { validateBody } from '../../middleware/validate.middleware.js';
 import { createLearningPlanSchema, updateLearningPlanSchema, updateScheduledSessionSchema } from './learning-plans.validation.js';
 
 const router = Router();
+const studentLearningPlanRoutes = Router();
 const controller = new LearningPlanController();
 
 router.use(authenticate, requireRole('educator'), requireApprovedEducator);
@@ -19,4 +20,8 @@ router.get('/student/:studentId/breakdown', controller.getStudentPlanBreakdown);
 router.patch('/:id', validateBody(updateLearningPlanSchema), controller.updatePlan);
 router.patch('/sessions/:sessionId', validateBody(updateScheduledSessionSchema), controller.updateSession);
 
-export { router as learningPlanRoutes };
+studentLearningPlanRoutes.use(authenticate, requireRole('student'));
+studentLearningPlanRoutes.get('/', controller.getMyPlanBreakdown);
+
+
+export { router as learningPlanRoutes, studentLearningPlanRoutes };

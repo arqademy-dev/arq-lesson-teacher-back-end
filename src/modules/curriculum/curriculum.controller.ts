@@ -29,14 +29,12 @@ export class CurriculumController {
   }
 
   // Classes
-  async createClass(req: Request<{ subjectId: string }>, res: Response) {
-    const subject = await service.getSubject(req.params.subjectId);
-    if (!subject) return res.status(404).json({ message: 'Parent subject not found' });
-    const cls = await service.createClass(req.params.subjectId, req.body);
+  async createClass(req: Request, res: Response) {
+    const cls = await service.createClass(req.body);
     return res.status(201).json(cls);
   }
-  async listClasses(req: Request<{ subjectId: string }>, res: Response) {
-    return res.json(await service.listClassesBySubject(req.params.subjectId));
+  async listClasses(req: Request, res: Response) {
+    return res.json(await service.listClasses());
   }
   async getClass(req: Request<{ id: string }>, res: Response) {
     const cls = await service.getClass(req.params.id);
@@ -55,14 +53,19 @@ export class CurriculumController {
   }
 
   // Topics
-  async createTopic(req: Request<{ classId: string }>, res: Response) {
-    const cls = await service.getClass(req.params.classId);
-    if (!cls) return res.status(404).json({ message: 'Parent class not found' });
-    const topic = await service.createTopic(req.params.classId, req.body);
+  async createTopic(req: Request, res: Response) {
+    const subject = await service.getSubject(req.body.subjectId);
+    if (!subject) return res.status(404).json({ message: 'Subject not found' });
+
+    const cls = await service.getClass(req.body.classId);
+    if (!cls) return res.status(404).json({ message: 'Class not found' });
+
+    const topic = await service.createTopic(req.body);
     return res.status(201).json(topic);
   }
-  async listTopics(req: Request<{ classId: string }>, res: Response) {
-    return res.json(await service.listTopicsByClass(req.params.classId));
+  async listTopics(req: Request, res: Response) {
+    const { subjectId, classId } = req.query as { subjectId?: string; classId?: string };
+    return res.json(await service.listTopics({ subjectId, classId }));
   }
   async getTopic(req: Request<{ id: string }>, res: Response) {
     const topic = await service.getTopic(req.params.id);

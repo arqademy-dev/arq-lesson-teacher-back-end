@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../config/db.js';
-import { users, educators, students } from '../../db/schema.js';
+import { users, educators, students, classes } from '../../db/schema.js';
 
 
 export class AdminService {
@@ -31,8 +31,9 @@ export class AdminService {
     if (!educator) return null;
 
     const [userRow] = await db.select().from(users).where(eq(users.id, educator.userId)).limit(1);
-
+    
     const myStudents = await db.select().from(students).where(eq(students.educatorId, educatorId));
+    const [classRow] = myStudents[0]?.classId ? await db.select().from(classes).where(eq(classes.id, myStudents[0].classId)).limit(1) : [];
     const studentProfiles = await Promise.all(
       myStudents.map(async (s) => {
         const [u] = await db.select().from(users).where(eq(users.id, s.userId)).limit(1);

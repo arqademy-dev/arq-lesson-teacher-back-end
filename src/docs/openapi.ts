@@ -33,6 +33,7 @@ export const openApiDocument = {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid' },
+          subjectId: { type: 'string', format: 'uuid' },
           classId: { type: 'string', format: 'uuid' },
           title: { type: 'string' },
           description: { type: 'string', nullable: true },
@@ -133,6 +134,7 @@ export const openApiDocument = {
           id: { type: 'string', format: 'uuid' },
           userId: { type: 'string', format: 'uuid' },
           educatorId: { type: 'string', format: 'uuid' },
+          classId: { type: 'string', format: 'uuid', nullable: true },
           enrollmentDate: { type: 'string', format: 'date' },
           academicLevel: { type: 'string', nullable: true },
         },
@@ -416,6 +418,8 @@ export const openApiDocument = {
           lastName: { type: 'string' },
           email: { type: 'string', format: 'email' },
           arqId: { type: 'string' },
+          classId: { type: 'string', format: 'uuid', nullable: true },
+          className: { type: 'string', nullable: true },
           academicLevel: { type: 'string', nullable: true },
           enrollmentDate: { type: 'string', format: 'date' },
         },
@@ -540,7 +544,7 @@ export const openApiDocument = {
           averageScore: { type: 'integer' },
         },
       },
-          BatchPresignedUploadRequest: {
+      BatchPresignedUploadRequest: {
         type: 'object',
         required: ['files'],
         properties: {
@@ -766,25 +770,23 @@ export const openApiDocument = {
     },
 
     // ================= CURRICULUM: CLASSES =================
-    '/api/admin/curriculum/subjects/{subjectId}/classes': {
-      post: {
-        summary: 'Create a class under a subject',
-        tags: ['Curriculum - Classes'],
-        security: [{ cookieAuth: [] }],
-        parameters: [{ name: 'subjectId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-        requestBody: {
-          required: true,
-          content: { 'application/json': { schema: { type: 'object', required: ['title'], properties: { title: { type: 'string' }, term: { type: 'string' }, isActive: { type: 'boolean' } } } } },
+      '/api/admin/curriculum/classes': {
+        post: {
+          summary: 'Create a class — standalone, not tied to any subject (e.g. "SS1", "Primary 4")',
+          tags: ['Curriculum - Classes'],
+          security: [{ cookieAuth: [] }],
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { type: 'object', required: ['title'], properties: { title: { type: 'string' }, term: { type: 'string' }, isActive: { type: 'boolean' } } } } },
+          },
+          responses: { '201': { description: 'Class created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Class' } } } } },
         },
-        responses: { '201': { description: 'Class created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Class' } } } } },
-      },
-      get: {
-        summary: 'List classes under a subject',
-        tags: ['Curriculum - Classes'],
-        security: [{ cookieAuth: [] }],
-        parameters: [{ name: 'subjectId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-        responses: { '200': { description: 'List of classes', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Class' } } } } } },
-      },
+        get: {
+          summary: 'List all classes',
+          tags: ['Curriculum - Classes'],
+          security: [{ cookieAuth: [] }],
+          responses: { '200': { description: 'List of all classes', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Class' } } } } } },
+        },
     },
     '/api/admin/curriculum/classes/{id}': {
       get: {
@@ -812,20 +814,21 @@ export const openApiDocument = {
     },
 
     // ================= CURRICULUM: TOPICS =================
-    '/api/admin/curriculum/classes/{classId}/topics': {
+    '/api/admin/curriculum/topics': {
       post: {
-        summary: 'Create a topic under a class',
+        summary: 'Create a topic — requires both subjectId and classId (this combination is what links a topic to e.g. "SS1 Mathematics")',
         tags: ['Curriculum - Topics'],
         security: [{ cookieAuth: [] }],
-        parameters: [{ name: 'classId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: {
           required: true,
           content: {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['title', 'sortOrder', 'expectedDurationDays'],
+                required: ['subjectId', 'classId', 'title', 'sortOrder', 'expectedDurationDays'],
                 properties: {
+                  subjectId: { type: 'string', format: 'uuid' },
+                  classId: { type: 'string', format: 'uuid' },
                   title: { type: 'string' },
                   description: { type: 'string' },
                   sortOrder: { type: 'integer' },
@@ -835,14 +838,20 @@ export const openApiDocument = {
             },
           },
         },
-        responses: { '201': { description: 'Topic created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Topic' } } } } },
+        responses: {
+          '201': { description: 'Topic created', content: { 'application/json': { schema: { $ref: '#/components/schemas/Topic' } } } },
+          '404': { description: 'Subject or class not found' },
+        },
       },
       get: {
-        summary: 'List topics under a class',
+        summary: 'List topics, optionally filtered by subjectId and/or classId',
         tags: ['Curriculum - Topics'],
         security: [{ cookieAuth: [] }],
-        parameters: [{ name: 'classId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-        responses: { '200': { description: 'List of topics', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Topic' } } } } } },
+        parameters: [
+          { name: 'subjectId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+          { name: 'classId', in: 'query', required: false, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: { '200': { description: 'List of topics matching the given filters', content: { 'application/json': { schema: { type: 'array', items: { $ref: '#/components/schemas/Topic' } } } } } },
       },
     },
     '/api/admin/curriculum/topics/{id}': {
@@ -1049,11 +1058,12 @@ export const openApiDocument = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['firstName', 'lastName', 'email'],
+                required: ['firstName', 'lastName', 'email', 'classId'],
                 properties: {
                   firstName: { type: 'string' },
                   lastName: { type: 'string' },
                   email: { type: 'string', format: 'email' },
+                  classId: { type: 'string', format: 'uuid' },
                   academicLevel: { type: 'string' },
                   password: { type: 'string', minLength: 6, description: 'Omit to auto-generate a temporary password' },
                 },
@@ -1401,6 +1411,17 @@ export const openApiDocument = {
           },
         },
         responses: { '200': { description: 'Graded submission result', content: { 'application/json': { schema: { $ref: '#/components/schemas/SubmissionResult' } } } } },
+      },
+    },
+    '/api/students/me/learning-plan': {
+      get: {
+        summary: 'Get the logged-in student\'s own full learning plan — every topic, session, and its completion status',
+        tags: ['Student - Daily Workflow'],
+        security: [{ cookieAuth: [] }],
+        responses: {
+          '200': { description: 'Full plan breakdown, all topics with done/todo sessions', content: { 'application/json': { schema: { $ref: '#/components/schemas/LearningPlanBreakdown' } } } },
+          '404': { description: 'Student profile not found' },
+        },
       },
     },
 

@@ -50,6 +50,27 @@
       "when": 1787017383993,
       "tag": "0006_lucky_galactus",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787237905462,
+      "tag": "0007_wet_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787269808098,
+      "tag": "0008_narrow_prima",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787270142584,
+      "tag": "0009_mean_liz_osborn",
+      "breakpoints": true
     }
   ]
 }

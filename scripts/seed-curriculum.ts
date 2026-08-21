@@ -33,7 +33,6 @@ interface TopicSeed {
 interface SubjectSeed {
   title: string;
   description: string;
-  className: string;
   topics: TopicSeed[];
 }
 
@@ -107,7 +106,6 @@ const curriculum: SubjectSeed[] = [
   {
     title: 'Mathematics',
     description: 'Foundational mathematics — numbers, operations, fractions, and shapes.',
-    className: 'Basic Mathematics',
     topics: [
       {
         title: 'Counting and Numbers',
@@ -174,7 +172,6 @@ const curriculum: SubjectSeed[] = [
   {
     title: 'Physics',
     description: 'Foundational physics — matter, energy, forces, and simple machines.',
-    className: 'Basic Physics',
     topics: [
       {
         title: 'What is Physics',
@@ -241,7 +238,6 @@ const curriculum: SubjectSeed[] = [
   {
     title: 'Chemistry',
     description: 'Foundational chemistry — substances, atoms, mixtures, and reactions.',
-    className: 'Basic Chemistry',
     topics: [
       {
         title: 'What is Chemistry',
@@ -308,7 +304,6 @@ const curriculum: SubjectSeed[] = [
   {
     title: 'Biology',
     description: 'Foundational biology — cells, plants, the human body, and animals.',
-    className: 'Basic Biology',
     topics: [
       {
         title: 'What is Biology',
@@ -375,7 +370,6 @@ const curriculum: SubjectSeed[] = [
   {
     title: 'Government',
     description: 'Foundational civics — how government works in Nigeria.',
-    className: 'Basic Government',
     topics: [
       {
         title: 'What is Government',
@@ -447,6 +441,14 @@ async function seed() {
     throw new Error('No admin user found — run scripts/seed-admin.ts first.');
   }
 
+  // One shared class, reused across every subject below — this is the whole point of the
+  // subject/class decoupling: "Basic Level" only needs to exist once, and each subject's
+  // topics attach to it via their own subjectId rather than the class being subject-specific.
+  const [sharedClass] = await db
+    .insert(classes)
+    .values({ title: 'Basic Level', term: 'Term 1', isActive: true })
+    .returning();
+
   let rotationIndex = 0;
 
   for (const subj of curriculum) {
@@ -455,17 +457,19 @@ async function seed() {
       .values({ title: subj.title, description: subj.description, createdByAdminId: admin.id })
       .returning();
 
-    const [classRow] = await db
-      .insert(classes)
-      .values({ subjectId: subjectRow.id, title: subj.className, term: 'Term 1', isActive: true })
-      .returning();
-
     for (let i = 0; i < subj.topics.length; i++) {
       const t = subj.topics[i];
 
       const [topicRow] = await db
         .insert(topics)
-        .values({ classId: classRow.id, title: t.title, description: t.description, sortOrder: i + 1, expectedDurationDays: 2 })
+        .values({
+          subjectId: subjectRow.id,
+          classId: sharedClass.id,
+          title: t.title,
+          description: t.description,
+          sortOrder: i + 1,
+          expectedDurationDays: 2,
+        })
         .returning();
 
       // Day 1 — Article, with one rotated interactive element attached

@@ -1,0 +1,1 @@
+ALTER TABLE "topics" ALTER COLUMN "subject_id" SET NOT NULL;

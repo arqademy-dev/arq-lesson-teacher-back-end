@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../config/db.js';
-import { students, users, learningPlans } from '../../db/schema.js';
+import { students, users, learningPlans, classes  } from '../../db/schema.js';
 import { LearningPlanService } from '../learning-plans/learning-plans.service.js';
 import { PaymentService } from '../payments/payments.service.js';
 import { educators } from '../../db/schema.js'; // add to existing schema import
@@ -16,6 +16,7 @@ export class AdminStudentsService {
     return Promise.all(
       allStudents.map(async (s) => {
         const [u] = await db.select().from(users).where(eq(users.id, s.userId)).limit(1);
+        const [classRow] = s.classId ? await db.select().from(classes).where(eq(classes.id, s.classId)).limit(1) : [];
         return {
           id: s.id,
           firstName: u?.firstName,
@@ -25,6 +26,8 @@ export class AdminStudentsService {
           academicLevel: s.academicLevel,
           enrollmentDate: s.enrollmentDate,
           educatorId: s.educatorId,
+          classId: s.classId,
+          className: classRow?.title ?? null,
         };
       })
     );
@@ -65,6 +68,7 @@ export class AdminStudentsService {
 
     const [u] = await db.select().from(users).where(eq(users.id, student.userId)).limit(1);
     const [educator] = await db.select().from(educators).where(eq(educators.id, student.educatorId)).limit(1);
+    const [classRow] = student.classId ? await db.select().from(classes).where(eq(classes.id, student.classId)).limit(1) : [];
 
     const learningPlans = await learningPlanService.getStudentPlanBreakdown(studentId);
     const payments = await paymentService.listPaymentsForStudent(studentId);
@@ -77,6 +81,8 @@ export class AdminStudentsService {
         lastName: u?.lastName,
         email: u?.email,
         arqId: u?.arqId,
+        classId: student.classId,
+        className: classRow?.title ?? null,
         academicLevel: student.academicLevel,
         enrollmentDate: student.enrollmentDate,
       },

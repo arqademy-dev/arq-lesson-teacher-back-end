@@ -14,7 +14,7 @@ import { curriculumRoutes } from './modules/curriculum/curriculum.routes.js';
 import { interactiveRoutes } from './modules/interactive/interactive.routes.js';
 
 import { studentsRoutes } from './modules/students/students.routes.js';
-import { learningPlanRoutes } from './modules/learning-plans/learning-plans.routes.js';
+import { learningPlanRoutes, studentLearningPlanRoutes } from './modules/learning-plans/learning-plans.routes.js';
 
 import { studentAuthRoutes } from './modules/students/students-auth.routes.js';
 import { studentPaymentRoutes, adminPaymentRoutes } from './modules/payments/payments.routes.js';
@@ -95,6 +95,9 @@ app.use('/api/students/me', studentReportRoutes);          // GET /api/students/
 app.use('/api/students/me/files/history', studentFileHistoryRoutes); // GET /api/students/me/files/history
 app.use('/api/educators/students', educatorFileHistoryRoutes);       // GET /api/educators/students/:studentId/files
 app.use('/api/admin/students', adminFileHistoryRoutes);              // GET /api/admin/students/:studentId/files
+
+app.use('/api/educators/learning-plans', learningPlanRoutes);
+app.use('/api/students/me/learning-plan', studentLearningPlanRoutes); // NEW
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });

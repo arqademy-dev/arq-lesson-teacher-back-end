@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import { subjects, classes, topics, resources } from '../../db/schema.js';
 
@@ -21,11 +21,14 @@ export class CurriculumService {
   }
 
   // --- Classes ---
-  createClass(subjectId: string, data: { title: string; term?: string; isActive?: boolean }) {
-    return db.insert(classes).values({ ...data, subjectId }).returning().then((r) => r[0]);
+  createClass(data: { title: string; term?: string; isActive?: boolean }) {
+    return db.insert(classes).values(data).returning().then((r) => r[0]);
   }
-  listClassesBySubject(subjectId: string) {
-    return db.select().from(classes).where(eq(classes.subjectId, subjectId));
+  // listClassesBySubject(subjectId: string) {
+  //   return db.select().from(classes).where(eq(classes.subjectId, subjectId));
+  // }
+  listClasses() {
+    return db.select().from(classes);
   }
   getClass(id: string) {
     return db.select().from(classes).where(eq(classes.id, id)).limit(1).then((r) => r[0] || null);
@@ -38,11 +41,19 @@ export class CurriculumService {
   }
 
   // --- Topics ---
-  createTopic(classId: string, data: { title: string; description?: string; sortOrder: number; expectedDurationDays: number }) {
-    return db.insert(topics).values({ ...data, classId }).returning().then((r) => r[0]);
+  createTopic(data: { subjectId: string; classId: string; title: string; description?: string; sortOrder: number; expectedDurationDays: number }) {
+    return db.insert(topics).values(data).returning().then((r) => r[0]);
   }
-  listTopicsByClass(classId: string) {
-    return db.select().from(topics).where(eq(topics.classId, classId));
+  // listTopicsByClass(classId: string) {
+  //   return db.select().from(topics).where(eq(topics.classId, classId));
+  // }
+  async listTopics(filters: { subjectId?: string; classId?: string }) {
+    const conditions = [];
+    if (filters.subjectId) conditions.push(eq(topics.subjectId, filters.subjectId));
+    if (filters.classId) conditions.push(eq(topics.classId, filters.classId));
+
+    if (conditions.length === 0) return db.select().from(topics);
+    return db.select().from(topics).where(and(...conditions));
   }
   getTopic(id: string) {
     return db.select().from(topics).where(eq(topics.id, id)).limit(1).then((r) => r[0] || null);

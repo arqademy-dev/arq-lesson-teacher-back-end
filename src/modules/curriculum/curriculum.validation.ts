@@ -15,6 +15,8 @@ export const createClassSchema = z.object({
 export const updateClassSchema = createClassSchema.partial();
 
 export const createTopicSchema = z.object({
+  subjectId: z.string().uuid(), // NEW — required, no longer inherited from a nested route
+  classId: z.string().uuid(),   // NEW — required, same reason
   title: z.string().min(1).max(100),
   description: z.string().optional(),
   sortOrder: z.number().int().nonnegative(),

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { LearningPlanService } from './learning-plans.service.js';
 import { StudentService } from '../students/students.service.js';
+import { eq } from 'drizzle-orm';
+import { db } from '../../config/db.js';
+import { students } from '../../db/schema.js';
 
 const learningPlanService = new LearningPlanService();
 const studentService = new StudentService();
@@ -76,6 +79,15 @@ export class LearningPlanController {
       console.error(err);
       return res.status(500).json({ message: 'Error updating session' });
     }
+  }
+
+
+  async getMyPlanBreakdown(req: Request, res: Response) {
+    const [profile] = await db.select().from(students).where(eq(students.userId, req.user!.id)).limit(1);
+    if (!profile) return res.status(404).json({ message: 'Student profile not found' });
+
+    const breakdown = await learningPlanService.getStudentPlanBreakdown(profile.id);
+    return res.json(breakdown);
   }
 
 }
