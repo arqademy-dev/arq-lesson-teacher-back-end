@@ -184,6 +184,67 @@ export class DailyService {
       }));
     }
 
+    async getSessionDetail(studentId: string, sessionId: string) {
+      const [session] = await db.select().from(scheduledSessions).where(eq(scheduledSessions.id, sessionId)).limit(1);
+      if (!session) return null;
+
+      const [lpt] = await db.select().from(learningPlanTopics).where(eq(learningPlanTopics.id, session.learningPlanTopicId)).limit(1);
+      if (!lpt) return null;
+
+      const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, lpt.learningPlanId)).limit(1);
+      if (!plan || plan.studentId !== studentId) return null; // not this student's session
+
+      const paid = await paymentService.hasSuccessfulPayment(plan.id);
+      if (!paid) return { paymentRequired: true } as const;
+
+      const [topic] = await db.select().from(topics).where(eq(topics.id, lpt.topicId)).limit(1);
+      const dayResources = await db
+        .select()
+        .from(resources)
+        .where(and(eq(resources.topicId, lpt.topicId), eq(resources.dayNumber, session.sessionDayNumber)))
+        .orderBy(asc(resources.sortOrder));
+
+      const resourcesWithElements = await Promise.all(
+        dayResources.map(async (resource) => {
+          const elements = await db.select().from(interactiveElements).where(eq(interactiveElements.resourceId, resource.id));
+          return { ...resource, interactiveElements: elements.map(({ correctAnswers, ...safe }) => safe) };
+        })
+      );
+
+      const allElementIds = resourcesWithElements.flatMap((r) => r.interactiveElements.map((ie: any) => ie.id));
+      const sessionLogs = allElementIds.length
+        ? await db.select().from(studentInteractionLogs).where(eq(studentInteractionLogs.scheduledSessionId, session.id))
+        : [];
+
+      const latestByElement = new Map<string, (typeof sessionLogs)[number]>();
+      for (const log of sessionLogs) {
+        const existing = latestByElement.get(log.interactiveElementId);
+        if (!existing || new Date(log.submittedAt) > new Date(existing.submittedAt)) {
+          latestByElement.set(log.interactiveElementId, log);
+        }
+      }
+      const submissions = Array.from(latestByElement.values()).map((log) => ({
+        interactiveElementId: log.interactiveElementId,
+        studentResponse: log.studentResponse,
+        isCorrect: log.isCorrect,
+        scoreAwarded: log.scoreAwarded,
+        attemptNumber: log.attemptNumber,
+        submittedAt: log.submittedAt,
+      }));
+
+      const isOverdue = !session.isCompleted && new Date(session.scheduledDate) < new Date(new Date().toDateString());
+
+      return {
+        session,
+        isOverdue,
+        topic,
+        learningPlanId: plan.id,
+        requireCorrectAnswersToProgress: plan.requireCorrectAnswersToProgress,
+        resources: resourcesWithElements,
+        submissions,
+      };
+    }
+
     
 
 }

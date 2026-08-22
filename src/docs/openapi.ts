@@ -1389,6 +1389,19 @@ export const openApiDocument = {
         },
       },
     },
+    '/api/students/me/sessions/{sessionId}': {
+      get: {
+        summary: 'Get full details for a specific session (past, current, or upcoming) — same shape as current-session, including prior submissions',
+        tags: ['Student - Daily Workflow'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'sessionId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Session detail with resources, interactive elements, and submissions', content: { 'application/json': { schema: { $ref: '#/components/schemas/CurrentSessionResponse' } } } },
+          '402': { description: 'Payment required before this session content is available' },
+          '404': { description: 'Session not found, or does not belong to this student' },
+        },
+      },
+    },
     '/api/students/me/submissions': {
       post: {
         summary: 'Submit a response to an interactive element for grading',

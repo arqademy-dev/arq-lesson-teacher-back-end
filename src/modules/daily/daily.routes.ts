@@ -13,5 +13,6 @@ router.get('/current-session', controller.getCurrent);
 router.post('/sessions/:sessionId/complete', controller.complete);
 router.post('/submissions', validateBody(submitInteractionSchema), controller.submit);
 router.get('/sessions/:sessionId/submissions', controller.getSessionSubmissions);
+router.get('/sessions/:sessionId', controller.getSessionDetail);
 
 export { router as dailyRoutes };

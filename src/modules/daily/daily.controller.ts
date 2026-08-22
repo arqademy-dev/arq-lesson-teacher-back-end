@@ -57,4 +57,16 @@ export class DailyController {
     if (submissions === null) return res.status(404).json({ message: 'Session not found or does not belong to you' });
     return res.json(submissions);
   }
+
+  async getSessionDetail(req: Request, res: Response) {
+    const sessionId = req.params.sessionId as string | undefined;
+    if (!sessionId) return res.status(400).json({ message: 'Session ID is required' });
+    const studentId = await getStudentId(req.user!.id);
+    if (!studentId) return res.status(404).json({ message: 'Student profile not found' });
+
+    const detail = await dailyService.getSessionDetail(studentId, sessionId);
+    if (!detail) return res.status(404).json({ message: 'Session not found, or does not belong to you' });
+    if ((detail as any).paymentRequired) return res.status(402).json({ message: 'Payment required before this session content is available' });
+    return res.json(detail);
+  }
 }
