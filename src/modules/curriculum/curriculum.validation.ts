@@ -32,4 +32,5 @@ export const createResourceSchema = z.object({
   sortOrder: z.number().int().nonnegative(),
   contentBody: contentBodySchema.optional(),
 });
+
 export const updateResourceSchema = createResourceSchema.partial();

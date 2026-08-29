@@ -904,10 +904,15 @@ export const openApiDocument = {
                 required: ['title', 'resourceType', 'urlOrPath', 'dayNumber', 'sortOrder'],
                 properties: {
                   title: { type: 'string' },
-                  resourceType: { type: 'string', enum: ['video', 'pdf', 'article', 'image', 'interactive', 'quiz'] },
+                  resourceType: { type: 'string', enum: ['video', 'pdf', 'article', 'image', 'interactive', 'quiz', 'submission'] },
                   urlOrPath: { type: 'string' },
                   dayNumber: { type: 'integer', description: 'Which day within the topic this resource belongs to' },
                   sortOrder: { type: 'integer' },
+                  contentBody: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/ContentBlock' },
+                    description: 'Only meaningful when resourceType is "article" — array of content blocks',
+                  },
                 },
               },
             },
@@ -943,10 +948,15 @@ export const openApiDocument = {
                 type: 'object',
                 properties: {
                   title: { type: 'string' },
-                  resourceType: { type: 'string', enum: ['video', 'pdf', 'article', 'image', 'interactive', 'quiz'] },
+                  resourceType: { type: 'string', enum: ['video', 'pdf', 'article', 'image', 'interactive', 'quiz', 'submission'] },
                   urlOrPath: { type: 'string' },
                   dayNumber: { type: 'integer' },
                   sortOrder: { type: 'integer' },
+                  contentBody: {
+                    type: 'array',
+                    items: { $ref: '#/components/schemas/ContentBlock' },
+                    description: 'Only meaningful when resourceType is "article" — array of content blocks',
+                  },
                 },
               },
             },
@@ -1554,6 +1564,18 @@ export const openApiDocument = {
         },
       },
     },
+    },
+    '/api/educators/students/{studentId}/learning-history': {
+      get: {
+        summary: 'Full learning history for one of my students — all plans, topics, sessions, and payment status',
+        tags: ['Educator - Students'],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: 'studentId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Student learning history', content: { 'application/json': { schema: { $ref: '#/components/schemas/StudentLearningHistory' } } } },
+          '404': { description: 'Student not found, or does not belong to you' },
+        },
+      },
     },
     '/api/educators/students/{studentId}/report': {
       get: {

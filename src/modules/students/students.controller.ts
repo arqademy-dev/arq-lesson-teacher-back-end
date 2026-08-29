@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import { StudentService } from './students.service.js';
+import { AdminStudentsService } from '../admin/admin-students.service.js';
 
 const studentService = new StudentService();
+const adminStudentsService = new AdminStudentsService();
 
 export class StudentController {
   async enroll(req: Request, res: Response) {
@@ -45,6 +47,15 @@ export class StudentController {
     const student = await studentService.getStudentBelongingToEducator(req.params.id, req.educatorProfile!.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
     return res.json(student);
+  }
+
+  async getLearningHistory(req: Request, res: Response) {
+    const studentId = req.params.id as string;
+    const student = await studentService.getStudentBelongingToEducator(studentId, req.educatorProfile!.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    const history = await adminStudentsService.getStudentLearningHistory(studentId);
+    return res.json(history);
   }
 
 }

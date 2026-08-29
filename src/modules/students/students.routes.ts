@@ -13,5 +13,6 @@ router.use(authenticate, requireRole('educator'), requireApprovedEducator);
 router.post('/', validateBody(enrollStudentSchema), controller.enroll);
 router.get('/', controller.listMyStudents);
 router.get('/:id', controller.getOne);
+router.get('/:id/learning-history', controller.getLearningHistory);
 
 export { router as studentsRoutes };
