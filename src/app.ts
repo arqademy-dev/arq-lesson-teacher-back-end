@@ -27,11 +27,18 @@ import { studentDashboardRoutes } from './modules/dashboard/student-dashboard.ro
 import { adminReportRoutes, educatorReportRoutes, studentReportRoutes } from './modules/reports/reports.routes.js';
 import { adminStudentsRoutes } from './modules/admin/admin-students.routes.js';
 
+import { adminProgrammesRoutes, educatorProgrammesRoutes } from './modules/programmes/programmes.routes.js';
+
 import { adminLearningPlansRoutes } from './modules/admin/admin-learning-plans.routes.js';
 import { studentFileHistoryRoutes, educatorFileHistoryRoutes, adminFileHistoryRoutes } from './modules/files/file-history.routes.js';
+import { adminQuestionBankRoutes } from './modules/question-bank/question-bank.routes.js';
+import { adminProgrammeTopicsRoutes } from './modules/programme-topics/programme-topics.routes.js';
 
 export const app = express();
 
+// ------------------------------------------------------------
+// Global Middlewares & Configuration
+// ------------------------------------------------------------
 app.use(helmet());
 // app.use(cors({ origin: process.env.CLIENT_URL || true, credentials: true }));
 app.use(helmet());
@@ -53,52 +60,59 @@ app.use(cors({
   credentials: true,
 }));
 
-
 app.use(express.json());
 app.use(cookieParser(process.env.JWT_SECRET || 'fallback-cookie-signing-key-string'));
 
+// ------------------------------------------------------------
+// Core & Documentation Routes
+// ------------------------------------------------------------
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
-
 app.use('/api/users', userRoutes);
-
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-
+// ------------------------------------------------------------
+// Admin Routes (/api/admin)
+// ------------------------------------------------------------
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/curriculum', curriculumRoutes);
 app.use('/api/admin/curriculum', interactiveRoutes);
 app.use('/api/admin/students', adminStudentsRoutes);
-app.use('/api/admin/students', adminReportRoutes);
-
+app.use('/api/admin/students', adminReportRoutes);        // GET /api/admin/students/:studentId/report
+app.use('/api/admin/students', adminFileHistoryRoutes);              // GET /api/admin/students/:studentId/files
+app.use('/api/admin/questions', adminQuestionBankRoutes);
 app.use('/api/admin/learning-plans', adminLearningPlansRoutes);
-
 app.use('/api/admin/files', filesRoutes);
-app.use('/api/students/me/files', studentFilesRoutes);
+app.use('/api/admin/payments', adminPaymentRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/admin/programmes', adminProgrammesRoutes);
+app.use('/api/admin/programmes', adminProgrammeTopicsRoutes);
 
+// ------------------------------------------------------------
+// Educator Routes (/api/educators)
+// ------------------------------------------------------------
 app.use('/api/educators/students', studentsRoutes);
+app.use('/api/educators/students', educatorReportRoutes); // GET /api/educators/students/:studentId/report — safe alongside the existing enroll/list routes at this same prefix, since /:id and /:studentId/report never collide
+app.use('/api/educators/students', educatorFileHistoryRoutes);       // GET /api/educators/students/:studentId/files
 app.use('/api/educators/learning-plans', learningPlanRoutes);
+app.use('/api/educators/dashboard', educatorDashboardRoutes);
+app.use('/api/educators/programmes', educatorProgrammesRoutes);
+ app.use('/api/educators/programmes', educatorProgrammesRoutes);
 
+// ------------------------------------------------------------
+// Student Routes (/api/students)
+// ------------------------------------------------------------
 app.use('/api/students', studentAuthRoutes);
 app.use('/api/students/payments', studentPaymentRoutes);
-app.use('/api/admin/payments', adminPaymentRoutes);
 app.use('/api/students/me', dailyRoutes);
-
-app.use('/api/admin/files', filesRoutes);
-app.use('/api/admin/dashboard', adminDashboardRoutes);
-app.use('/api/educators/dashboard', educatorDashboardRoutes);
-app.use('/api/students/me/dashboard', studentDashboardRoutes);
-app.use('/api/admin/students', adminReportRoutes);        // GET /api/admin/students/:studentId/report
-app.use('/api/educators/students', educatorReportRoutes); // GET /api/educators/students/:studentId/report — safe alongside the existing enroll/list routes at this same prefix, since /:id and /:studentId/report never collide
 app.use('/api/students/me', studentReportRoutes);          // GET /api/students/me/report
-
-
+app.use('/api/students/me/files', studentFilesRoutes);
 app.use('/api/students/me/files/history', studentFileHistoryRoutes); // GET /api/students/me/files/history
-app.use('/api/educators/students', educatorFileHistoryRoutes);       // GET /api/educators/students/:studentId/files
-app.use('/api/admin/students', adminFileHistoryRoutes);              // GET /api/admin/students/:studentId/files
-
-app.use('/api/educators/learning-plans', learningPlanRoutes);
+app.use('/api/students/me/dashboard', studentDashboardRoutes);
 app.use('/api/students/me/learning-plan', studentLearningPlanRoutes); // NEW
 
+// ------------------------------------------------------------
+// Fallback & Error Handlers
+// ------------------------------------------------------------
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });

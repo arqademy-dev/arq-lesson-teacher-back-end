@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, boolean, pgEnum, uuid, varchar, integer, date, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, boolean, pgEnum, uuid, varchar, integer, date, jsonb, unique, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'student', 'educator', 'parent']);
@@ -17,6 +17,8 @@ export const interactionTypeEnum = pgEnum('interaction_type', [
 export const learningPlanStatusEnum = pgEnum('learning_plan_status', ['active', 'completed', 'paused', 'cancelled']);
 export const topicStatusEnum = pgEnum('topic_status', ['pending', 'in_progress', 'completed']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'success', 'failed', 'refunded']);
+export const programmeStatusEnum = pgEnum('programme_status', ['draft', 'published', 'locked']);
+export const questionTypeEnum = pgEnum('question_type', ['multiple_choice', 'fill_blank']);
 
 // ==========================================
 // 1. USER MANAGEMENT MODULE
@@ -51,11 +53,34 @@ export const educators = pgTable('educators', {
 export const students = pgTable('students', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull().unique(),
-  educatorId: uuid('educator_id').references(() => educators.id).notNull(),
+  educatorId: uuid('educator_id').references(() => educators.id),
+
+  // New field to link programmes
+  programId: uuid('program_id').references(() => programmes.id, { onDelete: 'set null' }), // NEW
   classId: uuid('class_id').references(() => classes.id, { onDelete: 'set null' }), // NEW
+  phone: varchar('phone', { length: 30 }),   // nullable, the student's own phone
   enrollmentDate: date('enrollment_date').defaultNow().notNull(),
   academicLevel: varchar('academic_level', { length: 50 }),
 });
+
+ 
+export const guardians = pgTable('guardians', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  studentId: uuid('student_id').references(() => students.id, { onDelete: 'cascade' }).notNull(),
+  fullName: text('full_name').notNull(),
+  phone: varchar('phone', { length: 30 }),
+  email: text('email'),
+  relationship: varchar('relationship', { length: 30 }), // e.g. 'mother', 'father', 'guardian'
+  isPrimary: boolean('is_primary').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+ 
+// 3) Paste with your other relations at the bottom:
+ 
+export const guardiansRelations = relations(guardians, ({ one }) => ({
+  student: one(students, { fields: [guardians.studentId], references: [students.id] }),
+}));
+ 
 
 // ==========================================
 // 2. ADMIN-CREATED GLOBAL CURRICULUM CATALOG
@@ -65,8 +90,22 @@ export const subjects = pgTable('subjects', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: varchar('title', { length: 100 }).notNull(),
   description: text('description'),
-  createdByAdminId: uuid('created_by_admin_id').references(() => users.id).notNull(),
+  createdByAdminId: uuid('created_by_admin_id').references(() => users.id),
 });
+
+// new table for programmes, which can be linked to subjects and classes
+export const programmes = pgTable('programmes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: varchar('title', { length: 100 }).notNull(),
+  description: text('description'),
+ 
+  // NEW
+  subtitle: varchar('subtitle', { length: 150 }),            // e.g. "SS3 → University"
+  status: programmeStatusEnum('status').default('draft').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 
 export const classes = pgTable('classes', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -77,18 +116,70 @@ export const classes = pgTable('classes', {
 
 export const topics = pgTable('topics', {
   id: uuid('id').defaultRandom().primaryKey(),
-  subjectId: uuid('subject_id').references(() => subjects.id, { onDelete: 'cascade' }), // now required
-  classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }).notNull(),
+  subjectId: uuid('subject_id').references(() => subjects.id, { onDelete: 'cascade' }),
+  classId: uuid('class_id').references(() => classes.id, { onDelete: 'cascade' }),
+
+  // new field to link topics to programmes
+  programmeId: uuid('programme_id').references(() => programmes.id, { onDelete: 'set null' }), // NEW
   title: varchar('title', { length: 100 }).notNull(),
   description: text('description'),
-  sortOrder: integer('sort_order').notNull(),
+  sortOrder: integer('sort_order'),
   expectedDurationDays: integer('expected_duration_days').notNull(),
 });
+
+ 
+export const programmeTopics = pgTable(
+  'programme_topics',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    programmeId: uuid('programme_id').references(() => programmes.id, { onDelete: 'cascade' }).notNull(),
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'cascade' }).notNull(),
+    sequenceOrder: integer('sequence_order').notNull(), // 1..n inside one programme
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  // If your drizzle-orm version wants the array form, return [ unique(...).on(...) ] instead.
+  (t) => ({
+    onePerProgramme: unique('programme_topics_programme_topic_unique').on(t.programmeId, t.topicId),
+  })
+);
+ 
+export const questions = pgTable(
+  'questions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    // Topics are shared across programmes, so a question is too.
+    // Deleting a topic (existing curriculum endpoint) also removes its questions.
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'cascade' }).notNull(),
+    type: questionTypeEnum('type').default('multiple_choice').notNull(),
+    text: text('text').notNull(),
+ 
+    // multiple_choice only:
+    options: jsonb('options').$type<string[]>(),      // 2 to 6 answer choices
+    correctIndex: integer('correct_index'),            // position inside `options`
+ 
+    // fill_blank only:
+    acceptedAnswers: jsonb('accepted_answers').$type<string[]>(), // 1+ accepted answers, matched case-insensitively after trimming
+ 
+    feedback: text('feedback'),
+    isActive: boolean('is_active').default(true).notNull(), // false = archived
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  // If your drizzle-orm version wants the array form, return [ index(...).on(...) ] instead.
+  (t) => ({
+    topicIdx: index('questions_topic_idx').on(t.topicId),
+  })
+);
+ 
+ 
 
 export const resources = pgTable('resources', {
   id: uuid('id').defaultRandom().primaryKey(),
   contentBody: jsonb('content_body').$type<Record<string, any>[]>(), // array of ContentBlock, used mainly by resourceType 'article'
-  topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'cascade' }).notNull(),
+  topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'cascade' }),
+
+  // new field to link resources to programmes
+  programId: uuid('program_id').references(() => programmes.id, { onDelete: 'set null' }), // NEW
   title: varchar('title', { length: 100 }).notNull(),
   resourceType: resourceTypeEnum('resource_type').notNull(),
   urlOrPath: text('url_or_path').notNull(),
@@ -117,7 +208,7 @@ export const interactiveElements = pgTable('interactive_elements', {
 export const learningPlans = pgTable('learning_plans', {
   id: uuid('id').defaultRandom().primaryKey(),
   studentId: uuid('student_id').references(() => students.id, { onDelete: 'cascade' }).notNull(),
-  educatorId: uuid('educator_id').references(() => educators.id).notNull(),
+  educatorId: uuid('educator_id').references(() => educators.id),
   sessionsPerWeek: integer('sessions_per_week').notNull(),
   preferredDays: text('preferred_days').array().notNull(), // e.g. ['monday', 'wednesday', 'friday']
   startDate: date('start_date').notNull(),
@@ -218,3 +309,14 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   learningPlan: one(learningPlans, { fields: [payments.learningPlanId], references: [learningPlans.id] }),
   pricingTier: one(pricingTiers, { fields: [payments.pricingTierId], references: [pricingTiers.id] }),
 }));
+
+export const programmeTopicsRelations = relations(programmeTopics, ({ one }) => ({
+  programme: one(programmes, { fields: [programmeTopics.programmeId], references: [programmes.id] }),
+  topic: one(topics, { fields: [programmeTopics.topicId], references: [topics.id] }),
+}));
+
+  
+export const questionsRelations = relations(questions, ({ one }) => ({
+  topic: one(topics, { fields: [questions.topicId], references: [topics.id] }),
+}));
+ 

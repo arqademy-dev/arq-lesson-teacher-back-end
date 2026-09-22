@@ -13,7 +13,13 @@ export class StudentController {
         return res.status(400).json({ message: 'A user with this email already exists' });
       }
 
-      const { student, user, generatedPassword } = await studentService.enrollStudent(
+      // NEW: make sure the class / programme actually exists (otherwise the FK error becomes a vague 500)
+      const placementError = await studentService.findPlacementError(req.body);
+      if (placementError) {
+        return res.status(400).json({ message: placementError });
+      }
+
+      const { student, user, guardian, generatedPassword } = await studentService.enrollStudent(
         req.body,
         req.educatorProfile!.id
       );
@@ -24,6 +30,10 @@ export class StudentController {
           id: student.id,
           academicLevel: student.academicLevel,
           enrollmentDate: student.enrollmentDate,
+          // new keys are additive, so existing clients are unaffected
+          programId: student.programId,
+          classId: student.classId,
+          guardian: guardian ? { id: guardian.id, fullName: guardian.fullName } : null,
         },
         credentials: {
           email: user.email,
