@@ -6,7 +6,9 @@ export class AssessmentsService {
   private async enrichLog(log: typeof studentInteractionLogs.$inferSelect) {
     const [element] = await db.select().from(interactiveElements).where(eq(interactiveElements.id, log.interactiveElementId)).limit(1);
     const [resource] = element ? await db.select().from(resources).where(eq(resources.id, element.resourceId)).limit(1) : [null];
-    const [topic] = resource ? await db.select().from(topics).where(eq(topics.id, resource.topicId)).limit(1) : [null];
+    const topic = resource?.topicId 
+      ? (await db.select().from(topics).where(eq(topics.id, resource.topicId)).limit(1))[0] 
+      : null;
     return { ...log, interactionType: element?.interactionType, resourceTitle: resource?.title, topicTitle: topic?.title };
   }
 

@@ -67,7 +67,9 @@ export class AdminStudentsService {
     if (!student) return null;
 
     const [u] = await db.select().from(users).where(eq(users.id, student.userId)).limit(1);
-    const [educator] = await db.select().from(educators).where(eq(educators.id, student.educatorId)).limit(1);
+    const educator = student.educatorId 
+      ? (await db.select().from(educators).where(eq(educators.id, student.educatorId)).limit(1))[0] 
+      : null;
     const [classRow] = student.classId ? await db.select().from(classes).where(eq(classes.id, student.classId)).limit(1) : [];
 
     const learningPlans = await learningPlanService.getStudentPlanBreakdown(studentId);

@@ -71,6 +71,13 @@
       "when": 1787270142584,
       "tag": "0009_mean_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790053322404,
+      "tag": "0010_chubby_umar",
+      "breakpoints": true
     }
   ]
 }

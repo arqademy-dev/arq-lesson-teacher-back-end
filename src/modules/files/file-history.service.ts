@@ -16,7 +16,9 @@ export class FileHistoryService {
       fileLogs.map(async (log) => {
         const [element] = await db.select().from(interactiveElements).where(eq(interactiveElements.id, log.interactiveElementId)).limit(1);
         const [resource] = element ? await db.select().from(resources).where(eq(resources.id, element.resourceId)).limit(1) : [null];
-        const [topic] = resource ? await db.select().from(topics).where(eq(topics.id, resource.topicId)).limit(1) : [null];
+        const topic = resource?.topicId 
+        ? (await db.select().from(topics).where(eq(topics.id, resource.topicId)).limit(1))[0] 
+        : null;
         const [session] = await db.select().from(scheduledSessions).where(eq(scheduledSessions.id, log.scheduledSessionId)).limit(1);
         return {
           id: log.id,
