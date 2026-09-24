@@ -18,4 +18,4 @@ router.delete('/:id', controller.deactivate);
 export { router as adminStudentEnrollmentRoutes };
 
 // Mount it next to your other admin routers, e.g.:
-//   app.use('/api/admin/students', adminStudentEnrollmentRoutes);
+// app.use('/api/admin/students', adminStudentEnrollmentRoutes);

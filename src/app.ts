@@ -33,6 +33,12 @@ import { adminLearningPlansRoutes } from './modules/admin/admin-learning-plans.r
 import { studentFileHistoryRoutes, educatorFileHistoryRoutes, adminFileHistoryRoutes } from './modules/files/file-history.routes.js';
 import { adminQuestionBankRoutes } from './modules/question-bank/question-bank.routes.js';
 import { adminProgrammeTopicsRoutes } from './modules/programme-topics/programme-topics.routes.js';
+import { adminProgrammePlanRoutes, educatorProgrammePlanRoutes } from './modules/programme-learning-plan/programme-learning-plan.routes.js';
+import { adminProgrammePricesRoutes } from './modules/programme-prices/programme-prices.routes.js';
+import { adminWeeklyQuizRoutes, educatorWeeklyQuizRoutes } from './modules/weekly-quizzes/weekly-quizzes-owner.routes.js';
+import { studentWeeklyQuizRoutes } from './modules/weekly-quizzes/weekly-quizzes.routes.js';
+
+import { adminStudentEnrollmentRoutes } from './modules/students/students-admin.routes.js';
 
 export const app = express();
 
@@ -87,6 +93,15 @@ app.use('/api/admin/dashboard', adminDashboardRoutes);
 app.use('/api/admin/programmes', adminProgrammesRoutes);
 app.use('/api/admin/programmes', adminProgrammeTopicsRoutes);
 
+app.use('/api/admin/programme-prices', adminProgrammePricesRoutes);
+app.use('/api/students/me/weekly-quizzes', studentWeeklyQuizRoutes);
+
+
+app.use('/api/admin/students', adminProgrammePlanRoutes);
+app.use('/api/educators/students', educatorProgrammePlanRoutes);
+app.use('/api/admin', adminWeeklyQuizRoutes);
+app.use('/api/educators', educatorWeeklyQuizRoutes);
+
 // ------------------------------------------------------------
 // Educator Routes (/api/educators)
 // ------------------------------------------------------------
@@ -110,6 +125,7 @@ app.use('/api/students/me/files/history', studentFileHistoryRoutes); // GET /api
 app.use('/api/students/me/dashboard', studentDashboardRoutes);
 app.use('/api/students/me/learning-plan', studentLearningPlanRoutes); // NEW
 
+app.use('/api/admin/students', adminStudentEnrollmentRoutes);
 // ------------------------------------------------------------
 // Fallback & Error Handlers
 // ------------------------------------------------------------

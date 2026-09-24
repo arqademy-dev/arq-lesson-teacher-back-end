@@ -1,3 +1,10 @@
+// ------------------------------------------------------------------
+// This is your curriculum.controller.ts with two methods changed:
+// createTopic and updateTopic now only look up (and 404 on) subjectId/classId
+// when the request actually sent one — since both are optional now. Every
+// other method (subjects, classes, resources) is identical to what you pasted.
+// ------------------------------------------------------------------
+
 import { Request, Response } from 'express';
 import { CurriculumService } from './curriculum.service.js';
 
@@ -54,11 +61,17 @@ export class CurriculumController {
 
   // Topics
   async createTopic(req: Request, res: Response) {
-    const subject = await service.getSubject(req.body.subjectId);
-    if (!subject) return res.status(404).json({ message: 'Subject not found' });
+    // CHANGED — subjectId/classId are optional now: only look them up (and 404) if sent.
+    const { subjectId, classId } = req.body as { subjectId?: string; classId?: string };
 
-    const cls = await service.getClass(req.body.classId);
-    if (!cls) return res.status(404).json({ message: 'Class not found' });
+    if (subjectId) {
+      const subject = await service.getSubject(subjectId);
+      if (!subject) return res.status(404).json({ message: 'Subject not found' });
+    }
+    if (classId) {
+      const cls = await service.getClass(classId);
+      if (!cls) return res.status(404).json({ message: 'Class not found' });
+    }
 
     const topic = await service.createTopic(req.body);
     return res.status(201).json(topic);
@@ -73,6 +86,18 @@ export class CurriculumController {
     return res.json(topic);
   }
   async updateTopic(req: Request<{ id: string }>, res: Response) {
+    // CHANGED — same guard as createTopic, since a PATCH can also try to set subjectId/classId.
+    const { subjectId, classId } = req.body as { subjectId?: string; classId?: string };
+
+    if (subjectId) {
+      const subject = await service.getSubject(subjectId);
+      if (!subject) return res.status(404).json({ message: 'Subject not found' });
+    }
+    if (classId) {
+      const cls = await service.getClass(classId);
+      if (!cls) return res.status(404).json({ message: 'Class not found' });
+    }
+
     const topic = await service.updateTopic(req.params.id, req.body);
     if (!topic) return res.status(404).json({ message: 'Topic not found' });
     return res.json(topic);

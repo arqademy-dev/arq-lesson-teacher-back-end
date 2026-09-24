@@ -1,6 +1,15 @@
+// ------------------------------------------------------------------
+// This is your curriculum.service.ts with the topic method signatures widened
+// to match the validation change (subjectId/classId optional, summaryFormat
+// added). The actual insert/update calls were already generic — they just
+// spread `data` — so no runtime logic changes here, only types. Everything
+// else (subjects, classes, resources) is byte-for-byte what you pasted.
+// ------------------------------------------------------------------
+
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import { subjects, classes, topics, resources } from '../../db/schema.js';
+import type { SummaryFormat } from '../../shared/summary-format.js';
 
 export class CurriculumService {
   // --- Subjects ---
@@ -24,9 +33,6 @@ export class CurriculumService {
   createClass(data: { title: string; term?: string; isActive?: boolean }) {
     return db.insert(classes).values(data).returning().then((r) => r[0]);
   }
-  // listClassesBySubject(subjectId: string) {
-  //   return db.select().from(classes).where(eq(classes.subjectId, subjectId));
-  // }
   listClasses() {
     return db.select().from(classes);
   }
@@ -41,12 +47,18 @@ export class CurriculumService {
   }
 
   // --- Topics ---
-  createTopic(data: { subjectId: string; classId: string; title: string; description?: string; sortOrder: number; expectedDurationDays: number }) {
+  // CHANGED — subjectId/classId optional, summaryFormat added.
+  createTopic(data: {
+    subjectId?: string;
+    classId?: string;
+    title: string;
+    description?: string;
+    sortOrder: number;
+    expectedDurationDays: number;
+    summaryFormat?: SummaryFormat;
+  }) {
     return db.insert(topics).values(data).returning().then((r) => r[0]);
   }
-  // listTopicsByClass(classId: string) {
-  //   return db.select().from(topics).where(eq(topics.classId, classId));
-  // }
   async listTopics(filters: { subjectId?: string; classId?: string }) {
     const conditions = [];
     if (filters.subjectId) conditions.push(eq(topics.subjectId, filters.subjectId));
@@ -58,7 +70,19 @@ export class CurriculumService {
   getTopic(id: string) {
     return db.select().from(topics).where(eq(topics.id, id)).limit(1).then((r) => r[0] || null);
   }
-  updateTopic(id: string, data: Partial<{ title: string; description: string; sortOrder: number; expectedDurationDays: number }>) {
+  // CHANGED — subjectId/classId and summaryFormat addable/clearable via PATCH too.
+  updateTopic(
+    id: string,
+    data: Partial<{
+      subjectId: string | null;
+      classId: string | null;
+      title: string;
+      description: string;
+      sortOrder: number;
+      expectedDurationDays: number;
+      summaryFormat: SummaryFormat | null;
+    }>
+  ) {
     return db.update(topics).set(data).where(eq(topics.id, id)).returning().then((r) => r[0] || null);
   }
   deleteTopic(id: string) {

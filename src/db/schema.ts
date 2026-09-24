@@ -20,6 +20,10 @@ export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'success',
 export const programmeStatusEnum = pgEnum('programme_status', ['draft', 'published', 'locked']);
 export const questionTypeEnum = pgEnum('question_type', ['multiple_choice', 'fill_blank']);
 
+export const quizDayEnum = pgEnum('quiz_day', ['friday', 'saturday']);
+export const weeklyQuizStatusEnum = pgEnum('weekly_quiz_status', ['pending', 'submitted']);
+ 
+
 // ==========================================
 // 1. USER MANAGEMENT MODULE
 // ==========================================
@@ -121,6 +125,7 @@ export const topics = pgTable('topics', {
 
   // new field to link topics to programmes
   programmeId: uuid('programme_id').references(() => programmes.id, { onDelete: 'set null' }), // NEW
+  summaryFormat: jsonb('summary_format').$type<Record<string, any>>(),
   title: varchar('title', { length: 100 }).notNull(),
   description: text('description'),
   sortOrder: integer('sort_order'),
@@ -209,8 +214,14 @@ export const learningPlans = pgTable('learning_plans', {
   id: uuid('id').defaultRandom().primaryKey(),
   studentId: uuid('student_id').references(() => students.id, { onDelete: 'cascade' }).notNull(),
   educatorId: uuid('educator_id').references(() => educators.id),
-  sessionsPerWeek: integer('sessions_per_week').notNull(),
-  preferredDays: text('preferred_days').array().notNull(), // e.g. ['monday', 'wednesday', 'friday']
+
+  programmeId: uuid('programme_id').references(() => programmes.id, { onDelete: 'set null' }),
+  weeks: integer('weeks'),
+  quizDay: quizDayEnum('quiz_day'),
+  quizSize: integer('quiz_size'),
+
+  sessionsPerWeek: integer('sessions_per_week'),
+  preferredDays: text('preferred_days').array(), // e.g. ['monday', 'wednesday', 'friday']
   startDate: date('start_date').notNull(),
   endDate: date('end_date'),
   status: learningPlanStatusEnum('status').default('active').notNull(),
@@ -236,6 +247,50 @@ export const scheduledSessions = pgTable('scheduled_sessions', {
   educatorNotes: text('educator_notes'),
 });
 
+
+export const weeklyQuizzes = pgTable('weekly_quizzes', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  learningPlanId: uuid('learning_plan_id').references(() => learningPlans.id, { onDelete: 'cascade' }).notNull(),
+  weekNumber: integer('week_number').notNull(),
+  scheduledDate: date('scheduled_date').notNull(),
+  requestedSize: integer('requested_size').notNull(), // what the admin asked for (10/50/100)
+  topicIds: jsonb('topic_ids').$type<string[]>().notNull(), // snapshot: which topics this week covered
+  status: weeklyQuizStatusEnum('status').default('pending').notNull(),
+  score: integer('score'), // set once submitted
+  submittedAt: timestamp('submitted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+ 
+
+export const weeklyQuizQuestions = pgTable('weekly_quiz_questions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  weeklyQuizId: uuid('weekly_quiz_id').references(() => weeklyQuizzes.id, { onDelete: 'cascade' }).notNull(),
+  questionId: uuid('question_id').references(() => questions.id, { onDelete: 'set null' }), // for admin traceability only
+  orderIndex: integer('order_index').notNull(),
+  type: questionTypeEnum('type').notNull(),
+  text: text('text').notNull(),
+  options: jsonb('options').$type<string[]>(),
+  correctIndex: integer('correct_index'),
+  acceptedAnswers: jsonb('accepted_answers').$type<string[]>(),
+  feedback: text('feedback'),
+});
+ 
+export const weeklyQuizAnswers = pgTable(
+  'weekly_quiz_answers',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    weeklyQuizQuestionId: uuid('weekly_quiz_question_id').references(() => weeklyQuizQuestions.id, { onDelete: 'cascade' }).notNull(),
+    // { selectedIndex: number } for multiple_choice, { answerText: string } for fill_blank
+    studentResponse: jsonb('student_response').$type<Record<string, any>>().notNull(),
+    isCorrect: boolean('is_correct'), // null until the whole quiz is submitted and graded
+    scoreAwarded: integer('score_awarded').default(0).notNull(),
+    submittedAt: timestamp('submitted_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    onePerQuestion: unique('weekly_quiz_answers_question_unique').on(t.weeklyQuizQuestionId),
+  })
+);
+
 // ==========================================
 // 5. PRICING & PAYMENTS MODULE
 // ==========================================
@@ -248,13 +303,27 @@ export const pricingTiers = pgTable('pricing_tiers', {
   isActive: boolean('is_active').default(true).notNull(),
 });
 
+export const programmePrices = pgTable('programme_prices', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  programmeId: uuid('programme_id').references(() => programmes.id, { onDelete: 'cascade' }).notNull(),
+  label: varchar('label', { length: 100 }), // e.g. "Standard", "Early bird"
+  priceNaira: integer('price_naira').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+ 
+
 export const payments = pgTable('payments', {
   id: uuid('id').defaultRandom().primaryKey(),
   studentId: uuid('student_id').references(() => students.id, { onDelete: 'cascade' }).notNull(),
   learningPlanId: uuid('learning_plan_id').references(() => learningPlans.id, { onDelete: 'cascade' }).notNull(),
-  pricingTierId: uuid('pricing_tier_id').references(() => pricingTiers.id).notNull(),
+  pricingTierId: uuid('pricing_tier_id').references(() => pricingTiers.id),
   amountNaira: integer('amount_naira').notNull(),
   status: paymentStatusEnum('status').default('pending').notNull(),
+
+  programmePriceId: uuid('programme_price_id').references(() => programmePrices.id),
+  gafiaAccountNumber: varchar('gafia_account_number', { length: 100 }),
+
   provider: varchar('provider', { length: 50 }), // e.g. 'paystack', 'flutterwave'
   providerReference: text('provider_reference'),
   paidAt: timestamp('paid_at'),
@@ -318,5 +387,22 @@ export const programmeTopicsRelations = relations(programmeTopics, ({ one }) => 
   
 export const questionsRelations = relations(questions, ({ one }) => ({
   topic: one(topics, { fields: [questions.topicId], references: [topics.id] }),
+}));
+ 
+
+export const programmePricesRelations = relations(programmePrices, ({ one, many }) => ({
+  programme: one(programmes, { fields: [programmePrices.programmeId], references: [programmes.id] }),
+  payments: many(payments),
+}));
+ 
+export const weeklyQuizzesRelations = relations(weeklyQuizzes, ({ one, many }) => ({
+  learningPlan: one(learningPlans, { fields: [weeklyQuizzes.learningPlanId], references: [learningPlans.id] }),
+  questions: many(weeklyQuizQuestions),
+}));
+ 
+export const weeklyQuizQuestionsRelations = relations(weeklyQuizQuestions, ({ one }) => ({
+  quiz: one(weeklyQuizzes, { fields: [weeklyQuizQuestions.weeklyQuizId], references: [weeklyQuizzes.id] }),
+  sourceQuestion: one(questions, { fields: [weeklyQuizQuestions.questionId], references: [questions.id] }),
+  answer: one(weeklyQuizAnswers, { fields: [weeklyQuizQuestions.id], references: [weeklyQuizAnswers.weeklyQuizQuestionId] }),
 }));
  

@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import { programmes, programmeTopics, subjects, topics } from '../../db/schema.js';
+import type { SummaryFormat } from '../../shared/summary-format.js';
 
 export class ProgrammeTopicError extends Error {
   status: 400 | 404 | 409;
@@ -15,6 +16,7 @@ type NewTopicInput = {
   title: string;
   description?: string;
   expectedDurationDays?: number;
+  summaryFormat?: SummaryFormat;
 };
 
 export class ProgrammeTopicService {
@@ -55,6 +57,7 @@ export class ProgrammeTopicService {
         title: topics.title,
         description: topics.description,
         expectedDurationDays: topics.expectedDurationDays,
+        summaryFormat: topics.summaryFormat,
         subjectId: topics.subjectId,
         subjectTitle: subjects.title,
       })
@@ -75,6 +78,7 @@ export class ProgrammeTopicService {
         title: topics.title,
         description: topics.description,
         expectedDurationDays: topics.expectedDurationDays,
+        summaryFormat: topics.summaryFormat,
         subjectId: topics.subjectId,
         subjectTitle: subjects.title,
       })
@@ -133,6 +137,7 @@ export class ProgrammeTopicService {
         title: data.title,
         description: data.description,
         expectedDurationDays: data.expectedDurationDays ?? 1,
+        summaryFormat: data.summaryFormat,
       })
       .returning({ id: topics.id });
 
@@ -143,6 +148,21 @@ export class ProgrammeTopicService {
       throw err;
     }
 
+    return this.listTopics(programmeId);
+  }
+
+  // Sets or clears the topic's summary format. The topic is shared, so every programme using it sees the change.
+  async setSummaryFormat(programmeId: string, topicId: string, summaryFormat: SummaryFormat | null) {
+    await this.getEditableProgramme(programmeId);
+
+    const [link] = await db
+      .select({ id: programmeTopics.id })
+      .from(programmeTopics)
+      .where(and(eq(programmeTopics.programmeId, programmeId), eq(programmeTopics.topicId, topicId)))
+      .limit(1);
+    if (!link) throw new ProgrammeTopicError('Topic is not in this programme', 404);
+
+    await db.update(topics).set({ summaryFormat }).where(eq(topics.id, topicId));
     return this.listTopics(programmeId);
   }
 

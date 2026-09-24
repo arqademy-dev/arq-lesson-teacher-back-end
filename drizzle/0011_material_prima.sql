@@ -1,0 +1,1 @@
+ALTER TABLE "topics" ADD COLUMN "summary_format" jsonb;

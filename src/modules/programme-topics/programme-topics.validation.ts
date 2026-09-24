@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { summaryFormatSchema } from '../../shared/summary-format.js';
 
 export const uuidSchema = z.string().uuid();
 
@@ -12,8 +13,16 @@ export const addProgrammeTopicSchema = z.union([
     title: z.string().trim().min(1).max(100),
     description: z.string().trim().optional(),
     expectedDurationDays: z.number().int().min(1).max(30).optional(), // defaults to 1
+    summaryFormat: summaryFormatSchema.optional(),
   }),
 ]);
+
+// The summary format: header/body sections telling the student what to write about at the
+// end of the day. It lives on the topic, so every programme that uses the topic shows the
+// same format. Send an empty array or null to clear it.
+export const updateTopicSummarySchema = z.object({
+  summaryFormat: summaryFormatSchema.nullable(),
+});
 
 export const reorderTopicsSchema = z.object({
   topicIds: z.array(z.string().uuid()).min(1).max(100),
@@ -25,3 +34,4 @@ export const availableTopicsQuerySchema = z.object({
 
 export type AddProgrammeTopicBody = z.infer<typeof addProgrammeTopicSchema>;
 export type ReorderTopicsBody = z.infer<typeof reorderTopicsSchema>;
+export type UpdateTopicSummaryBody = z.infer<typeof updateTopicSummarySchema>;
