@@ -38,7 +38,13 @@ export class LearningPlanService {
 
     const insertedTopics = await db.insert(learningPlanTopics).values(topicRows).returning();
 
-    await this.generateSchedule(plan, insertedTopics);
+    await this.generateSchedule(
+      {
+        ...plan,
+        preferredDays: plan.preferredDays ?? [],
+      },
+      insertedTopics
+    );
 
     return plan;
   }
