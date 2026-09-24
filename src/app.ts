@@ -82,6 +82,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/curriculum', curriculumRoutes);
 app.use('/api/admin/curriculum', interactiveRoutes);
+app.use('/api/admin/students', adminStudentEnrollmentRoutes);
 app.use('/api/admin/students', adminStudentsRoutes);
 app.use('/api/admin/students', adminReportRoutes);        // GET /api/admin/students/:studentId/report
 app.use('/api/admin/students', adminFileHistoryRoutes);              // GET /api/admin/students/:studentId/files
