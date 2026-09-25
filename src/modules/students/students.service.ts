@@ -112,20 +112,27 @@ export class StudentService {
   // ------------------------------------------------------------
   // Educator views (unchanged)
   // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  // Educator views
+  // ------------------------------------------------------------
   async listStudentsForEducator(educatorId: string) {
     return db
       .select({
         id: students.id,
         userId: students.userId,
         educatorId: students.educatorId,
+        programId: students.programId,
+        programmeTitle: programmes.title,
         enrollmentDate: students.enrollmentDate,
         academicLevel: students.academicLevel,
         firstName: users.firstName,
         lastName: users.lastName,
         email: users.email,
+        arqId: users.arqId,
       })
       .from(students)
       .innerJoin(users, eq(students.userId, users.id))
+      .leftJoin(programmes, eq(students.programId, programmes.id))
       .where(eq(students.educatorId, educatorId));
   }
 
@@ -135,14 +142,18 @@ export class StudentService {
         id: students.id,
         userId: students.userId,
         educatorId: students.educatorId,
+        programId: students.programId,
+        programmeTitle: programmes.title,
         enrollmentDate: students.enrollmentDate,
         academicLevel: students.academicLevel,
         firstName: users.firstName,
         lastName: users.lastName,
         email: users.email,
+        arqId: users.arqId,
       })
       .from(students)
       .innerJoin(users, eq(students.userId, users.id))
+      .leftJoin(programmes, eq(students.programId, programmes.id))
       .where(
         and(
           eq(students.id, studentId),
