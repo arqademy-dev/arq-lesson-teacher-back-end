@@ -131,24 +131,62 @@ export class DailyService {
         );
       const attemptNumber = priorAttempts.length + 1;
 
-      let isCorrect: boolean;
-      let scoreAwarded: number;
+      let isCorrect = false;
+      let scoreAwarded = 0;
+
+      const response = data.response ?? {};
+      const correct = (element.correctAnswers ?? {}) as Record<string, any>;
 
       if (element.interactionType === 'file_upload') {
-        const hasFiles = Array.isArray(data.response?.fileUrls) && data.response.fileUrls.length > 0;
-        const hasFile = !!data.response?.fileUrl;
-        const hasText = !!data.response?.textNote;
+        const hasFiles = Array.isArray(response.fileUrls) && response.fileUrls.length > 0;
+        const hasFile = typeof response.fileUrl === 'string' && response.fileUrl.length > 0;
+        const hasText = typeof response.textNote === 'string' && response.textNote.trim().length > 0;
         isCorrect = hasFiles || hasFile || hasText;
         scoreAwarded = 0;
-
+      } else if (element.interactionType === 'fill_blank') {
+        const given = String(response.answer ?? response.answerText ?? '').trim().toLowerCase();
+        const accepted: string[] = Array.isArray(correct.acceptedAnswers)
+          ? correct.acceptedAnswers.map((a: string) => String(a).trim().toLowerCase())
+          : correct.answer != null
+            ? [String(correct.answer).trim().toLowerCase()]
+            : [];
+        isCorrect = given.length > 0 && accepted.includes(given);
+        scoreAwarded = isCorrect ? 10 : 0;
+      } else if (
+        element.interactionType === 'multiple_choice' ||
+        element.interactionType === 'interactive_video'
+      ) {
+        const selected =
+          typeof response.selectedIndex === 'number'
+            ? response.selectedIndex
+            : typeof response.selected === 'number'
+              ? response.selected
+              : null;
+        const expected =
+          typeof correct.selectedIndex === 'number'
+            ? correct.selectedIndex
+            : typeof correct.correctIndex === 'number'
+              ? correct.correctIndex
+              : null;
+        isCorrect = selected !== null && expected !== null && selected === expected;
+        scoreAwarded = isCorrect ? 10 : 0;
       } else {
-        isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
+        // fallback for other interaction types
+        isCorrect = JSON.stringify(response) === JSON.stringify(correct);
         scoreAwarded = isCorrect ? 10 : 0;
       }
 
       const [log] = await db
         .insert(studentInteractionLogs)
-        .values({ studentId, interactiveElementId: data.interactiveElementId, scheduledSessionId: data.scheduledSessionId, studentResponse: data.response, isCorrect, scoreAwarded, attemptNumber })
+        .values({
+          studentId,
+          interactiveElementId: data.interactiveElementId,
+          scheduledSessionId: data.scheduledSessionId,
+          studentResponse: data.response,
+          isCorrect,
+          scoreAwarded,
+          attemptNumber,
+        })
         .returning();
 
       return { isCorrect, scoreAwarded, attemptNumber, log };

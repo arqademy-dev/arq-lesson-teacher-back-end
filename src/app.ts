@@ -103,6 +103,8 @@ app.use('/api/educators/students', educatorProgrammePlanRoutes);
 app.use('/api/admin', adminWeeklyQuizRoutes);
 app.use('/api/educators', educatorWeeklyQuizRoutes);
 
+
+
 // ------------------------------------------------------------
 // Educator Routes (/api/educators)
 // ------------------------------------------------------------

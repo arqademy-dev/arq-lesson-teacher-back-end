@@ -164,7 +164,7 @@ export const questions = pgTable(
  
     // fill_blank only:
     acceptedAnswers: jsonb('accepted_answers').$type<string[]>(), // 1+ accepted answers, matched case-insensitively after trimming
- 
+    imageUrl: text('image_url'),
     feedback: text('feedback'),
     isActive: boolean('is_active').default(true).notNull(), // false = archived
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -219,6 +219,7 @@ export const learningPlans = pgTable('learning_plans', {
   weeks: integer('weeks'),
   quizDay: quizDayEnum('quiz_day'),
   quizSize: integer('quiz_size'),
+  quizDurationMinutes: integer('quiz_duration_minutes'),
 
   sessionsPerWeek: integer('sessions_per_week'),
   preferredDays: text('preferred_days').array(), // e.g. ['monday', 'wednesday', 'friday']
@@ -257,6 +258,9 @@ export const weeklyQuizzes = pgTable('weekly_quizzes', {
   topicIds: jsonb('topic_ids').$type<string[]>().notNull(), // snapshot: which topics this week covered
   status: weeklyQuizStatusEnum('status').default('pending').notNull(),
   score: integer('score'), // set once submitted
+
+  durationMinutes: integer('duration_minutes'), // snapshotted from the plan at generation time
+  startedAt: timestamp('started_at'), // set the first time the student saves an answer
   submittedAt: timestamp('submitted_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
@@ -273,6 +277,13 @@ export const weeklyQuizQuestions = pgTable('weekly_quiz_questions', {
   correctIndex: integer('correct_index'),
   acceptedAnswers: jsonb('accepted_answers').$type<string[]>(),
   feedback: text('feedback'),
+
+//    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+//    imageUrl: text('image_url'),
+//
+//    topicId records which of that week's topics this question was drawn from —
+//    snapshotted at generation time so it survives even if the source bank question
+//    is later archived, moved, or its questionId link goes null.
 });
  
 export const weeklyQuizAnswers = pgTable(
@@ -345,7 +356,58 @@ export const studentInteractionLogs = pgTable('student_interaction_logs', {
   attemptNumber: integer('attempt_number').notNull(), // NEW — which try this was for this element+session
   timeSpentSeconds: integer('time_spent_seconds'),
   submittedAt: timestamp('submitted_at').defaultNow().notNull(),
+  questionId: uuid('question_id').references(() => questions.id, { onDelete: 'set null' }), // NEW
 });
+
+// One row per (learning plan, calendar day). A day can hold more than one topic,
+// so this is keyed by date, not by a single topic or session.
+export const dailySubmissions = pgTable(
+  'daily_submissions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    learningPlanId: uuid('learning_plan_id').references(() => learningPlans.id, { onDelete: 'cascade' }).notNull(),
+    forDate: date('for_date').notNull(),
+    summaryNote: text('summary_note'),
+    submittedAt: timestamp('submitted_at'), // null = draft, set = handed in (locked)
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    onePerPlanDay: unique('daily_submissions_plan_date_unique').on(t.learningPlanId, t.forDate),
+  })
+);
+
+// Which topics that day covered — filled in when the day's submission is first created.
+export const dailySubmissionTopics = pgTable(
+  'daily_submission_topics',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    dailySubmissionId: uuid('daily_submission_id').references(() => dailySubmissions.id, { onDelete: 'cascade' }).notNull(),
+    learningPlanTopicId: uuid('learning_plan_topic_id').references(() => learningPlanTopics.id, { onDelete: 'cascade' }).notNull(),
+  },
+  (t) => ({
+    onePerTopic: unique('daily_submission_topics_unique').on(t.dailySubmissionId, t.learningPlanTopicId),
+  })
+);
+
+// Files are only TRACKED here — a URL the student already uploaded via your
+// existing presigned R2 endpoints. Nothing in this table performs an upload.
+export const dailySubmissionFiles = pgTable(
+  'daily_submission_files',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    dailySubmissionId: uuid('daily_submission_id').references(() => dailySubmissions.id, { onDelete: 'cascade' }).notNull(),
+    fileUrl: text('file_url').notNull(),
+    fileKey: text('file_key'),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    contentType: varchar('content_type', { length: 100 }),
+    sizeBytes: integer('size_bytes'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    submissionIdx: index('daily_submission_files_submission_idx').on(t.dailySubmissionId),
+  })
+);
 
 
 // ==========================================
@@ -406,3 +468,17 @@ export const weeklyQuizQuestionsRelations = relations(weeklyQuizQuestions, ({ on
   answer: one(weeklyQuizAnswers, { fields: [weeklyQuizQuestions.id], references: [weeklyQuizAnswers.weeklyQuizQuestionId] }),
 }));
  
+export const dailySubmissionsRelations = relations(dailySubmissions, ({ one, many }) => ({
+  learningPlan: one(learningPlans, { fields: [dailySubmissions.learningPlanId], references: [learningPlans.id] }),
+  topics: many(dailySubmissionTopics),
+  files: many(dailySubmissionFiles),
+}));
+
+export const dailySubmissionTopicsRelations = relations(dailySubmissionTopics, ({ one }) => ({
+  submission: one(dailySubmissions, { fields: [dailySubmissionTopics.dailySubmissionId], references: [dailySubmissions.id] }),
+  learningPlanTopic: one(learningPlanTopics, { fields: [dailySubmissionTopics.learningPlanTopicId], references: [learningPlanTopics.id] }),
+}));
+
+export const dailySubmissionFilesRelations = relations(dailySubmissionFiles, ({ one }) => ({
+  submission: one(dailySubmissions, { fields: [dailySubmissionFiles.dailySubmissionId], references: [dailySubmissions.id] }),
+}));

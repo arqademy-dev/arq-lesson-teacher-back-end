@@ -1,3 +1,14 @@
+// ------------------------------------------------------------------
+// This is your real programme-learning-plan.service.ts with THREE changes:
+//   1. Question selection now uses pickQuizQuestions() (fair per-topic split)
+//      instead of pooling everything and slicing randomly.
+//   2. quizDurationMinutes is accepted and snapshotted onto learningPlans +
+//      every weeklyQuizzes row it generates.
+//   3. Each weeklyQuizQuestions row now snapshots topicId + imageUrl.
+// Your buildProgrammeScheduleEven import/usage is untouched — I haven't seen
+// that file change and didn't want to guess at it. Diff before applying.
+// ------------------------------------------------------------------
+
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import {
@@ -14,8 +25,8 @@ import {
   weeklyQuizQuestions,
   payments,
 } from '../../db/schema.js';
-// import { buildProgrammeSchedule, type ProgrammeStep, type QuizIsoDay } from '../../shared/programme-schedule.js';
 import { buildProgrammeScheduleEven, type QuizIsoDay } from '../../shared/programme-schedule.js';
+import { pickQuizQuestions } from '../../shared/quiz-question-picker.js'; // NEW
 import type { CreateProgrammePlanBody } from './programme-learning-plan.validation.js';
 
 export class ProgrammePlanError extends Error {
@@ -49,40 +60,8 @@ export class ProgrammeLearningPlanService {
     if (Number.isNaN(start.getTime())) throw new ProgrammePlanError('startDate is not a valid date', 400);
     if (start.getUTCDay() !== 1) throw new ProgrammePlanError('startDate must be a Monday', 400);
 
-    // const steps: ProgrammeStep[] = await db
-    //   .select({ id: topics.id, expectedDurationDays: topics.expectedDurationDays })
-    //   .from(programmeTopics)
-    //   .innerJoin(topics, eq(programmeTopics.topicId, topics.id))
-    //   .where(eq(programmeTopics.programmeId, input.programmeId))
-    //   .orderBy(asc(programmeTopics.sequenceOrder));
-    // if (steps.length === 0) throw new ProgrammePlanError('Programme has no topics', 400);
-
-    // const quizIsoDay: QuizIsoDay = input.quizDay === 'friday' ? 5 : 6;
-    // const learningPerWeek = quizIsoDay - 1;
-    // const totalLearningSlots = input.weeks * learningPerWeek;
-    // const totalDurationDays = steps.reduce((sum, s) => sum + s.expectedDurationDays, 0);
-    // if (totalDurationDays > totalLearningSlots) {
-    //   throw new ProgrammePlanError(
-    //     `This programme needs ${totalDurationDays} learning day(s) but ${input.weeks} week(s) with a ${input.quizDay} quiz only provides ${totalLearningSlots}. Increase weeks, move the quiz day later, or shorten topics.`,
-    //     400
-    //   );
-    // }
-
-    // const activePrice = await db
-    //   .select({ id: programmePrices.id, priceNaira: programmePrices.priceNaira })
-    //   .from(programmePrices)
-    //   .where(and(eq(programmePrices.programmeId, input.programmeId), eq(programmePrices.isActive, true)))
-    //   .orderBy(desc(programmePrices.createdAt))
-    //   .limit(1)
-    //   .then((r) => r[0]);
-    // if (!activePrice) throw new ProgrammePlanError('No active price is set for this programme', 400);
-
-    // const schedule = buildProgrammeSchedule(steps, { weeks: input.weeks, quizDay: quizIsoDay, startDate: start });
-    // const lastQuizDate = schedule.quizzes[schedule.quizzes.length - 1]?.date;
-
-
-        const stepRows = await db
-      .select({ id: topics.id })
+    const stepRows = await db
+      .select({ id: topics.id, subjectId: topics.subjectId })
       .from(programmeTopics)
       .innerJoin(topics, eq(programmeTopics.topicId, topics.id))
       .where(eq(programmeTopics.programmeId, input.programmeId))
@@ -93,6 +72,14 @@ export class ProgrammeLearningPlanService {
     }
 
     const topicIds = stepRows.map((s) => s.id);
+    // Subject each topic belongs to, and the order subjects first appear in the
+    // programme sequence — used below to group quiz questions by subject.
+    const subjectByTopic = new Map(stepRows.map((s) => [s.id, s.subjectId]));
+    const subjectOrder: string[] = [];
+    for (const s of stepRows) {
+      const key = s.subjectId ?? '__none__';
+      if (!subjectOrder.includes(key)) subjectOrder.push(key);
+    }
     const quizIsoDay: QuizIsoDay = input.quizDay === 'friday' ? 5 : 6;
     const learningPerWeek = quizIsoDay - 1;
 
@@ -125,6 +112,7 @@ export class ProgrammeLearningPlanService {
         weeks: input.weeks,
         quizDay: input.quizDay,
         quizSize: input.quizSize,
+        quizDurationMinutes: input.quizDurationMinutes ?? null, // NEW
         sessionsPerWeek: learningPerWeek,
         preferredDays: DAY_NAMES.slice(0, learningPerWeek),
         startDate: input.startDate,
@@ -160,9 +148,11 @@ export class ProgrammeLearningPlanService {
       );
     }
 
-    // Weekly quizzes, each stocked with up to `quizSize` random active questions
-    // drawn from that week's topics. If fewer exist, the quiz just gets fewer —
-    // requestedSize (input) vs actual question count (queryable) shows the shortfall.
+    // Weekly quizzes. Questions are now chosen with a FAIR SPLIT across that
+    // week's topics (pickQuizQuestions), not a flat pool + random slice — so
+    // one heavily-stocked topic can no longer crowd out a thin one. If the
+    // combined pool is still smaller than quizSize, you just get everything
+    // that exists; nothing errors.
     for (const q of schedule.quizzes) {
       const pool = q.topicIds.length
         ? await db
@@ -170,7 +160,14 @@ export class ProgrammeLearningPlanService {
             .from(questions)
             .where(and(inArray(questions.topicId, q.topicIds), eq(questions.isActive, true)))
         : [];
-      const chosen = shuffle(pool).slice(0, input.quizSize);
+      const chosen = pickQuizQuestions(q.topicIds, pool, input.quizSize); // fair split per topic
+      // Group by subject (programme sequence order), random within each subject —
+      // this is what makes the quiz present subject-by-subject to the student.
+      chosen.sort((a, b) => {
+        const ai = subjectOrder.indexOf(subjectByTopic.get(a.topicId) ?? '__none__');
+        const bi = subjectOrder.indexOf(subjectByTopic.get(b.topicId) ?? '__none__');
+        return ai - bi;
+      });
 
       const [quizRow] = await db
         .insert(weeklyQuizzes)
@@ -179,6 +176,7 @@ export class ProgrammeLearningPlanService {
           weekNumber: q.week,
           scheduledDate: q.date,
           requestedSize: input.quizSize,
+          durationMinutes: input.quizDurationMinutes ?? null, // NEW — snapshotted per quiz
           topicIds: q.topicIds,
           status: 'pending',
         })
@@ -189,9 +187,11 @@ export class ProgrammeLearningPlanService {
           chosen.map((question, i) => ({
             weeklyQuizId: quizRow.id,
             questionId: question.id,
+            topicId: question.topicId, // NEW — which of this week's topics it came from
             orderIndex: i + 1,
             type: question.type,
             text: question.text,
+            imageUrl: question.imageUrl, // NEW
             options: question.options,
             correctIndex: question.correctIndex,
             acceptedAnswers: question.acceptedAnswers,
@@ -218,13 +218,4 @@ export class ProgrammeLearningPlanService {
 
     return { plan, paymentId: payment.id, amountNaira: activePrice.priceNaira };
   }
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }

@@ -7,6 +7,8 @@ export const createProgrammePlanSchema = z.object({
   weeks: z.number().int().min(1).max(12),
   quizDay: z.enum(['friday', 'saturday']),
   quizSize: z.number().int().min(1).max(200),
+  // Minutes the student gets to complete each weekly quiz. Omit for untimed.
+  quizDurationMinutes: z.number().int().min(1).max(240).optional(), // NEW
   // Must be a Monday (validated in the service, where "Monday" can be checked against the real calendar).
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD'),
   requireCorrectAnswersToProgress: z.boolean().optional(),
