@@ -129,6 +129,10 @@ app.use('/api/students/me/dashboard', studentDashboardRoutes);
 app.use('/api/students/me/learning-plan', studentLearningPlanRoutes); // NEW
 
 app.use('/api/admin/students', adminStudentEnrollmentRoutes);
+
+  app.use('/api/students/me/quizzes', studentWeeklyQuizRoutes);
+  app.use('/api/admin', adminWeeklyQuizRoutes);
+  app.use('/api/educators', educatorWeeklyQuizRoutes);
 // ------------------------------------------------------------
 // Fallback & Error Handlers
 // ------------------------------------------------------------

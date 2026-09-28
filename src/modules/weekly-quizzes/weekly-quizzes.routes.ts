@@ -1,27 +1,41 @@
 import { Router } from 'express';
 import { WeeklyQuizzesController } from './weekly-quizzes.controller.js';
+import { WeeklyQuizzesOwnerController } from './weekly-quizzes-owner.controller.js';
 import { authenticate, requireRole } from '../../middleware/auth.middleware.js';
+import { requireApprovedEducator } from '../../middleware/educator.middleware.js';
 import { validateBody } from '../../middleware/validate.middleware.js';
 import { saveAnswerSchema } from './weekly-quizzes.validation.js';
 
-const controller = new WeeklyQuizzesController();
+const student = new WeeklyQuizzesController();
+const owner = new WeeklyQuizzesOwnerController();
 
-const router = Router();
-router.use(authenticate, requireRole('student'));
+// ---------------- Student ----------------
+const studentRouter = Router();
+studentRouter.use(authenticate, requireRole('student'));
 
-// History: every week for one learning plan, status/score once submitted.
-router.get('/plans/:learningPlanId', controller.list);
+studentRouter.get('/plan/:learningPlanId', student.list); // history: every week, status, score
+studentRouter.get('/:weeklyQuizId', student.getDetail); // answers hidden until submitted
+studentRouter.put('/:weeklyQuizId/answers/:questionId', validateBody(saveAnswerSchema), student.saveAnswer);
+studentRouter.post('/:weeklyQuizId/submit', student.submit);
 
-// One quiz's questions. Answer key withheld until the quiz is submitted.
-router.get('/:weeklyQuizId', controller.getDetail);
+// ---------------- Admin (read-only) ----------------
+const adminRouter = Router();
+adminRouter.use(authenticate, requireRole('admin'));
+adminRouter.get('/learning-plans/:learningPlanId/weekly-quizzes', owner.listAsAdmin);
+adminRouter.get('/weekly-quizzes/:weeklyQuizId', owner.getDetailAsAdmin);
 
-// Save one answer at a time — does not grade or lock the quiz.
-router.put('/:weeklyQuizId/questions/:questionId/answer', validateBody(saveAnswerSchema), controller.saveAnswer);
+// ---------------- Educator (read-only, own students) ----------------
+const educatorRouter = Router();
+educatorRouter.use(authenticate, requireRole('educator'), requireApprovedEducator);
+educatorRouter.get('/learning-plans/:learningPlanId/weekly-quizzes', owner.listAsEducator);
 
-// Grades every question at once and locks the quiz.
-router.post('/:weeklyQuizId/submit', controller.submit);
-
-export { router as studentWeeklyQuizRoutes };
+export {
+  studentRouter as studentWeeklyQuizRoutes,
+  adminRouter as adminWeeklyQuizRoutes,
+  educatorRouter as educatorWeeklyQuizRoutes,
+};
 
 // Mount in app.ts:
-//   app.use('/api/students/me/weekly-quizzes', studentWeeklyQuizRoutes);
+//   app.use('/api/students/me/quizzes', studentWeeklyQuizRoutes);
+//   app.use('/api/admin', adminWeeklyQuizRoutes);
+//   app.use('/api/educators', educatorWeeklyQuizRoutes);
