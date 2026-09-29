@@ -20,4 +20,6 @@ adminRouter.get('/', controller.listAll);
 adminRouter.patch('/:id/approve', controller.approve);
 adminRouter.patch('/:id/reject', controller.reject);
 
+
+
 export { studentRouter as studentPaymentRoutes, adminRouter as adminPaymentRoutes };

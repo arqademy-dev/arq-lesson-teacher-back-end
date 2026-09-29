@@ -125,8 +125,7 @@ export const topics = pgTable('topics', {
 
   // new field to link topics to programmes
   programmeId: uuid('programme_id').references(() => programmes.id, { onDelete: 'set null' }), // NEW
-  summaryFormat: jsonb('summary_format').$type<Record<string, any>>(),
-  title: varchar('title', { length: 100 }).notNull(),
+  summaryFormat: jsonb('summary_format').$type<{ header: string; body: string }[]>(),  title: varchar('title', { length: 100 }).notNull(),
   description: text('description'),
   sortOrder: integer('sort_order'),
   expectedDurationDays: integer('expected_duration_days').notNull(),
@@ -329,6 +328,11 @@ export const payments = pgTable('payments', {
   studentId: uuid('student_id').references(() => students.id, { onDelete: 'cascade' }).notNull(),
   learningPlanId: uuid('learning_plan_id').references(() => learningPlans.id, { onDelete: 'cascade' }).notNull(),
   pricingTierId: uuid('pricing_tier_id').references(() => pricingTiers.id),
+  providerMeta: jsonb('provider_meta').$type<{
+     accountName?: string;
+    bankName?: string;
+    expiresAt?: string; // ISO datetime — when this temporal account stops accepting transfers
+  }>(),
   amountNaira: integer('amount_naira').notNull(),
   status: paymentStatusEnum('status').default('pending').notNull(),
 

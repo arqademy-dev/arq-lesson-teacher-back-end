@@ -106,6 +106,13 @@
       "when": 1790482886848,
       "tag": "0014_mute_genesis",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790657495219,
+      "tag": "0015_unusual_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

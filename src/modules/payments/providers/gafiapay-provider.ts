@@ -1,50 +1,64 @@
+import crypto from 'crypto';
 import { PaymentProvider, PaymentInitiationResult } from './payment-provider.interface.js';
 
-const GAFIAPAY_SECRET_KEY = process.env.GAFIAPAY_SECRET_KEY;
-const GAFIAPAY_WEBHOOK_SECRET = process.env.GAFIAPAY_WEBHOOK_SECRET;
+const BASE_URL = 'https://api.gafiapay.com/api/v1/external';
+const TEMPORAL_ACCOUNT_TTL_MINUTES = 20;
 
 export class GafiaPayProvider implements PaymentProvider {
   name = 'gafiapay';
 
-  async initiate(params: { amountNaira: number; email: string; metadata: Record<string, any> }): Promise<PaymentInitiationResult> {
-    // TODO: replace with GafiaPay's actual "initiate transaction" endpoint once you have their docs.
-    // Typical shape for Nigerian gateways (Paystack/Flutterwave/Monnify all follow this):
-    //
-    // const res = await fetch('https://api.gafiapay.com/v1/transactions/initiate', {
-    //   method: 'POST',
-    //   headers: {
-    //     Authorization: `Bearer ${GAFIAPAY_SECRET_KEY}`,
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     amount: params.amountNaira * 100, // many gateways expect kobo, not naira — confirm this
-    //     email: params.email,
-    //     metadata: params.metadata,
-    //   }),
-    // });
-    // const data = await res.json();
-    // return { providerReference: data.data.reference, redirectUrl: data.data.authorization_url };
+  // Direct port of your working generateTemporalAccount() — same base URL,
+  // same endpoint, same header names, same HMAC-SHA256(JSON.stringify(payload) + timestamp)
+  // signing scheme. Only the caller-facing shape changed to match PaymentProvider.
+  // (Your original used Web Crypto's subtle.sign for browser/Node portability —
+  // this backend only ever runs in Node, so plain crypto.createHmac is simpler
+  // and produces byte-identical hex output.)
+  async initiate(params: { amountNaira: number; email: string; name: string; reference: string }): Promise<PaymentInitiationResult> {
+    const secretKey = process.env.GAFIAPAY_SECRET_KEY;
+    const apiKey = process.env.GAFIAPAY_API_KEY;
+    const bvn = process.env.PREFERED_BVN;
 
-    throw new Error('GafiaPay integration not yet implemented — fill in this method once you have their API docs.');
-  }
+    if (!secretKey || !apiKey) throw new Error('GafiaPay environment variables are missing.');
+    if (!bvn) throw new Error('PREFERED_BVN is not configured');
 
-  verifyWebhookSignature(rawBody: string, signatureHeader: string | undefined): boolean {
-    // TODO: most Nigerian gateways sign webhooks with HMAC-SHA512 of the raw body using your secret key.
-    // Example (Paystack-style):
-    // const crypto = require('crypto');
-    // const hash = crypto.createHmac('sha512', GAFIAPAY_WEBHOOK_SECRET!).update(rawBody).digest('hex');
-    // return hash === signatureHeader;
-    return false;
-  }
+    const payload = {
+      email: params.email,
+      name: params.name,
+      amount: params.amountNaira,
+      reference: params.reference,
+      bvn,
+    };
 
-  extractStatusFromWebhook(payload: any): 'success' | 'failed' | 'pending' {
-    // TODO: map GafiaPay's actual status field/values once known.
-    // e.g. return payload.data.status === 'success' ? 'success' : 'failed';
-    return 'pending';
-  }
+    const timestamp = Date.now().toString();
+    const signatureString = `${JSON.stringify(payload)}${timestamp}`;
+    const signature = crypto.createHmac('sha256', secretKey).update(signatureString).digest('hex');
 
-  extractReferenceFromWebhook(payload: any): string {
-    // TODO: e.g. return payload.data.reference;
-    return '';
+    const response = await fetch(`${BASE_URL}/account/generate/temporary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'x-signature': signature,
+        'x-timestamp': timestamp,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`GafiaPay failed: ${error}`);
+    }
+
+    const gafiaResponse = await response.json();
+
+    return {
+      providerReference: params.reference,
+      virtualAccount: {
+        accountNumber: gafiaResponse.data?.accountNumber,
+        accountName: gafiaResponse.data?.accountName,
+        bankName: gafiaResponse.data?.bankName || 'GafiaPay Virtual',
+        expiresInMinutes: TEMPORAL_ACCOUNT_TTL_MINUTES,
+      },
+    };
   }
 }

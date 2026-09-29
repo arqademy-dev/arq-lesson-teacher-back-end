@@ -39,6 +39,8 @@ import { adminWeeklyQuizRoutes, educatorWeeklyQuizRoutes } from './modules/weekl
 import { studentWeeklyQuizRoutes } from './modules/weekly-quizzes/weekly-quizzes.routes.js';
 
 import { adminStudentEnrollmentRoutes } from './modules/students/students-admin.routes.js';
+// import { studentDailySubmissionRoutes } from './modules/daily/daily-submissions.routes.js';
+import { studentDailySubmissionRoutes } from './modules/daily-submissions/daily-submissions.routes.js';
 
 export const app = express();
 
@@ -129,6 +131,7 @@ app.use('/api/students/me/dashboard', studentDashboardRoutes);
 app.use('/api/students/me/learning-plan', studentLearningPlanRoutes); // NEW
 
 app.use('/api/admin/students', adminStudentEnrollmentRoutes);
+app.use('/api/students/me/daily-submissions', studentDailySubmissionRoutes);
 
   app.use('/api/students/me/quizzes', studentWeeklyQuizRoutes);
   app.use('/api/admin', adminWeeklyQuizRoutes);

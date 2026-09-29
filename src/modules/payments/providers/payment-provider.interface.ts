@@ -1,12 +1,17 @@
+export interface VirtualAccountDetails {
+  accountNumber: string;
+  accountName: string;
+  bankName: string;
+  expiresInMinutes: number;
+}
+
 export interface PaymentInitiationResult {
-  providerReference: string;
-  redirectUrl?: string; // where to send the student/parent to complete payment (if applicable)
+  providerReference: string; // our own bookkeeping reference, sent to GafiaPay but NOT what its webhook reconciles by
+  redirectUrl?: string; // unused by GafiaPay's temporal-account flow; kept for any future hosted-checkout provider
+  virtualAccount?: VirtualAccountDetails;
 }
 
 export interface PaymentProvider {
   name: string;
-  initiate(params: { amountNaira: number; email: string; metadata: Record<string, any> }): Promise<PaymentInitiationResult>;
-  verifyWebhookSignature(rawBody: string, signatureHeader: string | undefined): boolean;
-  extractStatusFromWebhook(payload: any): 'success' | 'failed' | 'pending';
-  extractReferenceFromWebhook(payload: any): string;
+  initiate(params: { amountNaira: number; email: string; name: string; reference: string }): Promise<PaymentInitiationResult>;
 }
