@@ -1,7 +1,10 @@
 import { eq, and, or } from 'drizzle-orm';
 import { db } from '../../config/db.js';
-import { payments, pricingTiers, learningPlanTopics, students } from '../../db/schema.js';
+import { payments, pricingTiers, learningPlanTopics, students, learningPlans } from '../../db/schema.js';
 import { getPaymentProvider } from './providers/index.js';
+import { ProgrammePriceService } from '../programme-prices/programme-prices.service.js';
+
+const programmePriceService = new ProgrammePriceService();
 
 export class PaymentService {
   async getStudentProfileByUserId(userId: string) {
@@ -71,24 +74,25 @@ export class PaymentService {
     }
 
     // No payment yet, or its virtual account expired unpaid — (re)provision.
-    const topicCount = await this.countTopicsInPlan(learningPlanId);
-    const tier = await this.findTierForTopicCount(topicCount);
-    if (!tier) throw new Error("No pricing tier matches this plan's topic count");
-
+  // No payment yet, or its virtual account expired unpaid — (re)provision.
+  const [plan] = await db.select({ programmeId: learningPlans.programmeId }).from(learningPlans).where(eq(learningPlans.id, learningPlanId)).limit(1);
+  if (!plan?.programmeId) throw new Error('This learning plan has no programme attached');
+  const price = await programmePriceService.getActive(plan.programmeId);
+  if (!price) throw new Error('No active price is set for this programme');
     const provider = getPaymentProvider();
     // Our own reference — sent to GafiaPay for their records, but their
     // webhook reconciles by account number, not this value. Kept for our own
     // audit trail and so re-provisioning reuses a fresh, unique value each time.
     const reference = existing?.providerReference && !stillUsable ? `${existing.providerReference}-R${Date.now()}` : `ARQ-${learningPlanId}-${Date.now()}`;
 
-    const initiation = await provider.initiate({ amountNaira: tier.priceNaira, email, name, reference });
+    const initiation = await provider.initiate({ amountNaira: price.priceNaira, email, name, reference });
     const expiresAt = new Date(Date.now() + (initiation.virtualAccount?.expiresInMinutes ?? 20) * 60 * 1000).toISOString();
 
     const values = {
       studentId,
       learningPlanId,
-      pricingTierId: tier.id,
-      amountNaira: tier.priceNaira,
+      programmePriceId: price.id,
+      amountNaira: price.priceNaira,
       status: 'pending' as const,
       provider: provider.name,
       providerReference: initiation.providerReference,
