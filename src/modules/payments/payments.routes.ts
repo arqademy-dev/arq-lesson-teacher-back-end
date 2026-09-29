@@ -12,6 +12,8 @@ studentRouter.use(authenticate, requireRole('student'));
 studentRouter.get('/', controller.myPayments);
 studentRouter.post('/initiate', validateBody(initiatePaymentSchema), controller.initiate);
 studentRouter.get('/me', controller.myPayments);
+studentRouter.get('/me', controller.myPayments);
+studentRouter.get('/:paymentId/status', controller.getStatus);
 // studentRouter.get('/me/', controller.myPayments);
 
 adminRouter.use(authenticate, requireRole('admin'));
