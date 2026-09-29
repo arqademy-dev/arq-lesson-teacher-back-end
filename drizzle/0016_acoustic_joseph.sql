@@ -1,0 +1,1 @@
+ALTER TABLE "learning_plans" ALTER COLUMN "require_correct_answers_to_progress" SET DEFAULT false;

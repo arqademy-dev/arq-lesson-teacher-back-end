@@ -225,7 +225,7 @@ export const learningPlans = pgTable('learning_plans', {
   startDate: date('start_date').notNull(),
   endDate: date('end_date'),
   status: learningPlanStatusEnum('status').default('active').notNull(),
-  requireCorrectAnswersToProgress: boolean('require_correct_answers_to_progress').default(true).notNull(), // NEW
+  requireCorrectAnswersToProgress: boolean('require_correct_answers_to_progress').default(false).notNull(), // NEW
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
