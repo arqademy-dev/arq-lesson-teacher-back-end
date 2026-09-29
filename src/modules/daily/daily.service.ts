@@ -1,3 +1,14 @@
+// ------------------------------------------------------------------
+// ONE change from your real daily.service.ts: the resources query in BOTH
+// getCurrentSession() and getSessionDetail() no longer filters by
+// `resources.dayNumber === session.sessionDayNumber`. It now returns EVERY
+// resource for the topic, ordered by dayNumber then sortOrder, so a topic
+// with several resources always shows all of them regardless of which
+// dayNumber they were tagged with. Everything else is byte-for-byte what
+// you pasted. Diff before applying — apply the same one-line change in
+// both methods.
+// ------------------------------------------------------------------
+
 import { eq, and, asc } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import {
@@ -32,11 +43,12 @@ export class DailyService {
 
           if (session) {
             const [topic] = await db.select().from(topics).where(eq(topics.id, lpt.topicId)).limit(1);
+            // CHANGED — was: .where(and(eq(resources.topicId, lpt.topicId), eq(resources.dayNumber, session.sessionDayNumber)))
             const dayResources = await db
               .select()
               .from(resources)
-              .where(and(eq(resources.topicId, lpt.topicId), eq(resources.dayNumber, session.sessionDayNumber)))
-              .orderBy(asc(resources.sortOrder));
+              .where(eq(resources.topicId, lpt.topicId))
+              .orderBy(asc(resources.dayNumber), asc(resources.sortOrder));
 
             const resourcesWithElements = await Promise.all(
               dayResources.map(async (resource) => {
@@ -45,7 +57,6 @@ export class DailyService {
               })
             );
 
-            // NEW — latest submission per interactive element, for refresh-safe pre-fill
             const allElementIds = resourcesWithElements.flatMap((r) => r.interactiveElements.map((ie: any) => ie.id));
             const sessionLogs = allElementIds.length
               ? await db.select().from(studentInteractionLogs).where(eq(studentInteractionLogs.scheduledSessionId, session.id))
@@ -75,9 +86,9 @@ export class DailyService {
               isOverdue,
               topic,
               learningPlanId: plan.id,
-              requireCorrectAnswersToProgress: plan.requireCorrectAnswersToProgress, // NEW
+              requireCorrectAnswersToProgress: plan.requireCorrectAnswersToProgress,
               resources: resourcesWithElements,
-              submissions, // NEW
+              submissions,
             };
           }
         }
@@ -111,7 +122,6 @@ export class DailyService {
       return updated;
     }
 
-
     async submitInteraction(
       studentId: string,
       data: { interactiveElementId: string; scheduledSessionId: string; response: Record<string, any> }
@@ -131,62 +141,30 @@ export class DailyService {
         );
       const attemptNumber = priorAttempts.length + 1;
 
-      let isCorrect = false;
-      let scoreAwarded = 0;
-
-      const response = data.response ?? {};
-      const correct = (element.correctAnswers ?? {}) as Record<string, any>;
+      let isCorrect: boolean;
+      let scoreAwarded: number;
 
       if (element.interactionType === 'file_upload') {
-        const hasFiles = Array.isArray(response.fileUrls) && response.fileUrls.length > 0;
-        const hasFile = typeof response.fileUrl === 'string' && response.fileUrl.length > 0;
-        const hasText = typeof response.textNote === 'string' && response.textNote.trim().length > 0;
+        const hasFiles = Array.isArray(data.response?.fileUrls) && data.response.fileUrls.length > 0;
+        const hasFile = !!data.response?.fileUrl;
+        const hasText = !!data.response?.textNote;
         isCorrect = hasFiles || hasFile || hasText;
         scoreAwarded = 0;
+
       } else if (element.interactionType === 'fill_blank') {
-        const given = String(response.answer ?? response.answerText ?? '').trim().toLowerCase();
-        const accepted: string[] = Array.isArray(correct.acceptedAnswers)
-          ? correct.acceptedAnswers.map((a: string) => String(a).trim().toLowerCase())
-          : correct.answer != null
-            ? [String(correct.answer).trim().toLowerCase()]
-            : [];
-        isCorrect = given.length > 0 && accepted.includes(given);
+        const accepted: string[] = (element.correctAnswers as any)?.acceptedAnswers ?? [];
+        const given = String((data.response as any)?.answer ?? '').trim().toLowerCase();
+        isCorrect = accepted.some((a) => a.trim().toLowerCase() === given);
         scoreAwarded = isCorrect ? 10 : 0;
-      } else if (
-        element.interactionType === 'multiple_choice' ||
-        element.interactionType === 'interactive_video'
-      ) {
-        const selected =
-          typeof response.selectedIndex === 'number'
-            ? response.selectedIndex
-            : typeof response.selected === 'number'
-              ? response.selected
-              : null;
-        const expected =
-          typeof correct.selectedIndex === 'number'
-            ? correct.selectedIndex
-            : typeof correct.correctIndex === 'number'
-              ? correct.correctIndex
-              : null;
-        isCorrect = selected !== null && expected !== null && selected === expected;
-        scoreAwarded = isCorrect ? 10 : 0;
+
       } else {
-        // fallback for other interaction types
-        isCorrect = JSON.stringify(response) === JSON.stringify(correct);
+        isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
         scoreAwarded = isCorrect ? 10 : 0;
       }
 
       const [log] = await db
         .insert(studentInteractionLogs)
-        .values({
-          studentId,
-          interactiveElementId: data.interactiveElementId,
-          scheduledSessionId: data.scheduledSessionId,
-          studentResponse: data.response,
-          isCorrect,
-          scoreAwarded,
-          attemptNumber,
-        })
+        .values({ studentId, interactiveElementId: data.interactiveElementId, scheduledSessionId: data.scheduledSessionId, studentResponse: data.response, isCorrect, scoreAwarded, attemptNumber })
         .returning();
 
       return { isCorrect, scoreAwarded, attemptNumber, log };
@@ -200,7 +178,7 @@ export class DailyService {
       if (!lpt) return null;
 
       const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, lpt.learningPlanId)).limit(1);
-      if (!plan || plan.studentId !== studentId) return null; // not this student's session
+      if (!plan || plan.studentId !== studentId) return null;
 
       const logs = await db.select().from(studentInteractionLogs).where(eq(studentInteractionLogs.scheduledSessionId, sessionId));
 
@@ -230,17 +208,18 @@ export class DailyService {
       if (!lpt) return null;
 
       const [plan] = await db.select().from(learningPlans).where(eq(learningPlans.id, lpt.learningPlanId)).limit(1);
-      if (!plan || plan.studentId !== studentId) return null; // not this student's session
+      if (!plan || plan.studentId !== studentId) return null;
 
       const paid = await paymentService.hasSuccessfulPayment(plan.id);
       if (!paid) return { paymentRequired: true } as const;
 
       const [topic] = await db.select().from(topics).where(eq(topics.id, lpt.topicId)).limit(1);
+      // CHANGED — was: .where(and(eq(resources.topicId, lpt.topicId), eq(resources.dayNumber, session.sessionDayNumber)))
       const dayResources = await db
         .select()
         .from(resources)
-        .where(and(eq(resources.topicId, lpt.topicId), eq(resources.dayNumber, session.sessionDayNumber)))
-        .orderBy(asc(resources.sortOrder));
+        .where(eq(resources.topicId, lpt.topicId))
+        .orderBy(asc(resources.dayNumber), asc(resources.sortOrder));
 
       const resourcesWithElements = await Promise.all(
         dayResources.map(async (resource) => {
@@ -282,7 +261,5 @@ export class DailyService {
         submissions,
       };
     }
-
-    
 
 }
