@@ -70,6 +70,9 @@ app.use(cors({
   credentials: true,
 }));
 
+
+  app.use('/api/payments/webhooks', gafiaPayWebhookRoutes);
+
 app.use(express.json());
 app.use(cookieParser(process.env.JWT_SECRET || 'fallback-cookie-signing-key-string'));
 
@@ -141,10 +144,10 @@ app.use('/api/students/me/daily-submissions', studentDailySubmissionRoutes);
 
 
 
-  app.use('/api/payments/webhooks', gafiaPayWebhookRoutes);
 
 
-  
+
+
 // ------------------------------------------------------------
 // Fallback & Error Handlers
 // ------------------------------------------------------------
