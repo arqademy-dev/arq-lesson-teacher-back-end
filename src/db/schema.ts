@@ -78,13 +78,7 @@ export const guardians = pgTable('guardians', {
   isPrimary: boolean('is_primary').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
- 
-// 3) Paste with your other relations at the bottom:
- 
-export const guardiansRelations = relations(guardians, ({ one }) => ({
-  student: one(students, { fields: [guardians.studentId], references: [students.id] }),
-}));
- 
+
 
 // ==========================================
 // 2. ADMIN-CREATED GLOBAL CURRICULUM CATALOG
@@ -485,4 +479,9 @@ export const dailySubmissionTopicsRelations = relations(dailySubmissionTopics, (
 
 export const dailySubmissionFilesRelations = relations(dailySubmissionFiles, ({ one }) => ({
   submission: one(dailySubmissions, { fields: [dailySubmissionFiles.dailySubmissionId], references: [dailySubmissions.id] }),
+})); 
+
+export const guardiansRelations = relations(guardians, ({ one }) => ({
+  student: one(students, { fields: [guardians.studentId], references: [students.id] }),
 }));
+ 
