@@ -1,9 +1,15 @@
+// ------------------------------------------------------------------
+// Your real students-auth.controller.ts with ONE change: me() now joins
+// programmes to add programmeTitle onto studentProfile. login() and the
+// imports are untouched except for adding `programmes` to the schema import.
+// ------------------------------------------------------------------
+
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../../config/db.js';
-import { users, students } from '../../db/schema.js';
+import { users, students, programmes } from '../../db/schema.js'; // CHANGED — added programmes
 import { getAuthCookieOptions } from '../../utils/cookie-options.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secure-dev-secret-key-change-me';
@@ -40,13 +46,24 @@ export class StudentAuthController {
 
     const [profile] = await db.select().from(students).where(eq(students.userId, user.id)).limit(1);
 
+    // NEW — look up the programme's title, if the student has one.
+    let programmeTitle: string | null = null;
+    if (profile?.programId) {
+      const [prog] = await db
+        .select({ title: programmes.title })
+        .from(programmes)
+        .where(eq(programmes.id, profile.programId))
+        .limit(1);
+      programmeTitle = prog?.title ?? null;
+    }
+
     return res.json({
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       arqId: user.arqId,
-      studentProfile: profile || null,
+      studentProfile: profile ? { ...profile, programmeTitle } : null, // CHANGED
     });
   }
 }
