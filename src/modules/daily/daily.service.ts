@@ -144,23 +144,41 @@ export class DailyService {
       let isCorrect: boolean;
       let scoreAwarded: number;
 
-      if (element.interactionType === 'file_upload') {
-        const hasFiles = Array.isArray(data.response?.fileUrls) && data.response.fileUrls.length > 0;
+      if (element.interactionType === "file_upload") {
+        const hasFiles =
+          Array.isArray(data.response?.fileUrls) && data.response.fileUrls.length > 0;
         const hasFile = !!data.response?.fileUrl;
         const hasText = !!data.response?.textNote;
         isCorrect = hasFiles || hasFile || hasText;
         scoreAwarded = 0;
-
-      } else if (element.interactionType === 'fill_blank') {
-        const accepted: string[] = (element.correctAnswers as any)?.acceptedAnswers ?? [];
-        const given = String((data.response as any)?.answer ?? '').trim().toLowerCase();
+      } else if (element.interactionType === "fill_blank") {
+        const accepted: string[] =
+          (element.correctAnswers as any)?.acceptedAnswers ?? [];
+        const given = String((data.response as any)?.answer ?? "")
+          .trim()
+          .toLowerCase();
         isCorrect = accepted.some((a) => a.trim().toLowerCase() === given);
         scoreAwarded = isCorrect ? 10 : 0;
-
+      } else if (element.interactionType === "multiple_choice") {
+        // New canonical shape: { answer: "exact option text" }
+        const expected = String(
+          (element.correctAnswers as any)?.answer ?? ""
+        )
+          .trim()
+          .toLowerCase();
+        const given = String((data.response as any)?.answer ?? "")
+          .trim()
+          .toLowerCase();
+        isCorrect = expected.length > 0 && expected === given;
+        scoreAwarded = isCorrect ? 10 : 0;
       } else {
-        isCorrect = JSON.stringify(data.response) === JSON.stringify(element.correctAnswers);
+        // Fallback for any other interaction types
+        isCorrect =
+          JSON.stringify(data.response) ===
+          JSON.stringify(element.correctAnswers);
         scoreAwarded = isCorrect ? 10 : 0;
       }
+
 
       const [log] = await db
         .insert(studentInteractionLogs)
