@@ -9,7 +9,7 @@
 // that file change and didn't want to guess at it. Diff before applying.
 // ------------------------------------------------------------------
 
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import {
   learningPlans,
@@ -217,5 +217,45 @@ export class ProgrammeLearningPlanService {
       .returning();
 
     return { plan, paymentId: payment.id, amountNaira: activePrice.priceNaira };
+  }
+
+  // NEW — the student's most recent programme-based plan, if any, plus its latest payment.
+  async getForStudent(studentId: string) {
+    const [plan] = await db
+      .select()
+      .from(learningPlans)
+      .where(and(eq(learningPlans.studentId, studentId), isNotNull(learningPlans.programmeId)))
+      .orderBy(desc(learningPlans.createdAt))
+      .limit(1);
+    if (!plan) return null;
+
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.learningPlanId, plan.id))
+      .orderBy(desc(payments.createdAt))
+      .limit(1);
+
+    return { plan, payment: payment ?? null };
+  }
+
+  // NEW — small, deliberately narrow: only what's safe to change after the
+  // schedule/quizzes have already been generated. Weeks/quizDay/quizSize
+  // are NOT editable here — changing them would desync the already-created
+  // scheduledSessions and weeklyQuizzes rows.
+  async update(
+    planId: string,
+    studentId: string,
+    patch: { requireCorrectAnswersToProgress?: boolean; status?: 'active' | 'completed' | 'paused' | 'cancelled' }
+  ) {
+    const [existing] = await db
+      .select({ id: learningPlans.id })
+      .from(learningPlans)
+      .where(and(eq(learningPlans.id, planId), eq(learningPlans.studentId, studentId)))
+      .limit(1);
+    if (!existing) throw new ProgrammePlanError('Plan not found', 404);
+
+    const [updated] = await db.update(learningPlans).set(patch).where(eq(learningPlans.id, planId)).returning();
+    return updated;
   }
 }

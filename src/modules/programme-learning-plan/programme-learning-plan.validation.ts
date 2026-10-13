@@ -15,3 +15,13 @@ export const createProgrammePlanSchema = z.object({
 });
 
 export type CreateProgrammePlanBody = z.infer<typeof createProgrammePlanSchema>;
+
+// Deliberately narrow — weeks/quizDay/quizSize are NOT editable here (see service.update).
+export const updateProgrammePlanSchema = z
+  .object({
+    requireCorrectAnswersToProgress: z.boolean().optional(),
+    status: z.enum(['active', 'completed', 'paused', 'cancelled']).optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, { message: 'Nothing to update' });
+
+export type UpdateProgrammePlanBody = z.infer<typeof updateProgrammePlanSchema>;

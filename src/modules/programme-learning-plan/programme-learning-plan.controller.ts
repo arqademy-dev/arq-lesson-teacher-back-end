@@ -23,6 +23,25 @@ export class ProgrammeLearningPlanController {
     }
   }
 
+  async getForStudentAsAdmin(req: Request<{ studentId: string }>, res: Response) {
+    try {
+      const result = await service.getForStudent(req.params.studentId);
+      if (!result) return res.status(404).json({ message: 'No plan yet for this student' });
+      return res.json(result);
+    } catch (err) {
+      return fail(err, res, 'Error loading plan');
+    }
+  }
+
+  async updateAsAdmin(req: Request<{ studentId: string; planId: string }>, res: Response) {
+    try {
+      const plan = await service.update(req.params.planId, req.params.studentId, req.body);
+      return res.json(plan);
+    } catch (err) {
+      return fail(err, res, 'Error updating plan');
+    }
+  }
+
   async createAsEducator(req: Request<{ studentId: string }>, res: Response) {
     const [owned] = await db
       .select({ id: students.id })
