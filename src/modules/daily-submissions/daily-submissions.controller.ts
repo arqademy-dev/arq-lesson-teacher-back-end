@@ -117,4 +117,20 @@ export class DailySubmissionController {
       return fail(err, res, 'Error attaching admin file');
     }
   }
+
+    // GET /api/admin/students/:studentId/daily-submissions
+  async adminList(req: Request<{ studentId: string }>, res: Response) {
+    try {
+      if (!(await service.studentExists(req.params.studentId))) {
+        return res.status(404).json({ message: 'Student not found' });
+      }
+      const parsed = listDailySubmissionsQuerySchema.safeParse(req.query);
+      if (!parsed.success) return res.status(400).json({ message: 'Invalid query parameters' });
+
+      return res.json(await service.listForStudent(req.params.studentId, parsed.data));
+    } catch (err) {
+      return fail(err, res, 'Error loading daily submissions');
+    }
+  }
 }
+

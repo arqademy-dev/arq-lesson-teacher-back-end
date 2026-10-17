@@ -42,8 +42,7 @@ import { adminStudentEnrollmentRoutes } from './modules/students/students-admin.
 // import { studentDailySubmissionRoutes } from './modules/daily/daily-submissions.routes.js';
 import { studentDailySubmissionRoutes } from './modules/daily-submissions/daily-submissions.routes.js';
 import { gafiaPayWebhookRoutes } from './modules/payments/gafiapay-webhook.routes.js';
-
-
+import { adminDailySubmissionRoutes } from './modules/daily-submissions/daily-submission-admin.routes.js';
 export const app = express();
 
 // ------------------------------------------------------------
@@ -142,7 +141,7 @@ app.use('/api/students/me/daily-submissions', studentDailySubmissionRoutes);
   app.use('/api/admin', adminWeeklyQuizRoutes);
   app.use('/api/educators', educatorWeeklyQuizRoutes);
 
-
+app.use('/api/admin/students', adminDailySubmissionRoutes);
 
 
 
