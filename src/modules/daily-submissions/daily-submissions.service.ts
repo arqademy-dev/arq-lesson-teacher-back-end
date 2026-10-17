@@ -12,7 +12,7 @@ import {
   topics,
 } from '../../db/schema.js';
 import { PaymentService } from '../payments/payments.service.js';
-import type { AddFilesBody } from './daily-submissions.validation.js';
+import type { AddFilesBody, AddAdminFileBody } from './daily-submissions.validation.js';
 
 const paymentService = new PaymentService();
 
@@ -36,6 +36,16 @@ type DayTopic = {
   summaryFormat: { header: string; body: string }[] | null;
 };
 
+type FileView = {
+  id: string;
+  fileUrl: string;
+  fileKey: string | null;
+  fileName: string;
+  contentType: string | null;
+  sizeBytes: number | null;
+  createdAt: Date;
+};
+
 export type DayView = {
   id: string | null; // null until the student first saves something for the day
   learningPlanId: string;
@@ -44,15 +54,8 @@ export type DayView = {
   summaryNote: string | null;
   submittedAt: Date | null;
   topics: DayTopic[];
-  files: {
-    id: string;
-    fileUrl: string;
-    fileKey: string | null;
-    fileName: string;
-    contentType: string | null;
-    sizeBytes: number | null;
-    createdAt: Date;
-  }[];
+  files: FileView[]; // uploaded by the student
+  adminFiles: FileView[]; // feedback / material uploaded by an admin
 };
 
 type SubmissionRow = typeof dailySubmissions.$inferSelect;
@@ -117,8 +120,8 @@ export class DailySubmissionService {
     return row || null;
   }
 
-  // Creates the day's row the first time the student saves anything, and freezes which
-  // topics that day covered. Safe if two requests race: the unique key lets only one win.
+  // Creates the day's row the first time anyone (student or admin) saves anything, and freezes
+  // which topics that day covered. Safe if two requests race: the unique key lets only one win.
   private async ensureSubmission(planId: string, date: string) {
     const existing = await this.findSubmission(planId, date);
     if (existing) return existing;
@@ -176,20 +179,25 @@ export class DailySubmissionService {
         .orderBy(asc(dailySubmissionFiles.createdAt)),
     ]);
 
-    return rows.map((r) => ({
-      id: r.id,
-      learningPlanId: r.learningPlanId,
-      forDate: r.forDate,
-      status: r.submittedAt ? 'submitted' : 'draft',
-      summaryNote: r.summaryNote,
-      submittedAt: r.submittedAt,
-      topics: topicRows
-        .filter((t) => t.dailySubmissionId === r.id)
-        .map(({ dailySubmissionId, ...topic }) => topic),
-      files: fileRows
-        .filter((f) => f.dailySubmissionId === r.id)
-        .map(({ dailySubmissionId, ...file }) => file),
-    }));
+    // This is the one place every day response is built (getDay, list, reopen all go through it),
+    // so splitting student / admin files here covers the single-day and list cases at once.
+    return rows.map((r) => {
+      const allFiles = fileRows.filter((f) => f.dailySubmissionId === r.id);
+      const strip = ({ dailySubmissionId, ...file }: (typeof allFiles)[number]) => file;
+      return {
+        id: r.id,
+        learningPlanId: r.learningPlanId,
+        forDate: r.forDate,
+        status: r.submittedAt ? ('submitted' as const) : ('draft' as const),
+        summaryNote: r.summaryNote,
+        submittedAt: r.submittedAt,
+        topics: topicRows
+          .filter((t) => t.dailySubmissionId === r.id)
+          .map(({ dailySubmissionId, ...topic }) => topic),
+        files: allFiles.filter((f) => f.uploadedBy === 'student').map(strip),
+        adminFiles: allFiles.filter((f) => f.uploadedBy === 'admin').map(strip),
+      };
+    });
   }
 
   private async hydrateOne(submission: SubmissionRow) {
@@ -221,6 +229,7 @@ export class DailySubmissionService {
       submittedAt: null,
       topics: dayTopics,
       files: [],
+      adminFiles: [],
     };
   }
 
@@ -247,10 +256,11 @@ export class DailySubmissionService {
     const submission = await this.ensureSubmission(planId, date);
     this.assertOpen(submission);
 
+    // Only the student's own files count toward their limit, admin files don't.
     const current = await db
       .select({ id: dailySubmissionFiles.id })
       .from(dailySubmissionFiles)
-      .where(eq(dailySubmissionFiles.dailySubmissionId, submission.id));
+      .where(and(eq(dailySubmissionFiles.dailySubmissionId, submission.id), eq(dailySubmissionFiles.uploadedBy, 'student')));
     if (current.length + files.length > MAX_FILES_PER_DAY) {
       throw new DailySubmissionError(`You can attach at most ${MAX_FILES_PER_DAY} files per day`, 400);
     }
@@ -263,6 +273,7 @@ export class DailySubmissionService {
         fileName: f.fileName,
         contentType: f.contentType,
         sizeBytes: f.sizeBytes,
+        uploadedBy: 'student' as const,
       }))
     );
 
@@ -277,9 +288,16 @@ export class DailySubmissionService {
     if (!submission) throw new DailySubmissionError('Nothing submitted for this date yet', 404);
     this.assertOpen(submission);
 
+    // Students can only remove their own files, never an admin's.
     const removed = await db
       .delete(dailySubmissionFiles)
-      .where(and(eq(dailySubmissionFiles.id, fileId), eq(dailySubmissionFiles.dailySubmissionId, submission.id)))
+      .where(
+        and(
+          eq(dailySubmissionFiles.id, fileId),
+          eq(dailySubmissionFiles.dailySubmissionId, submission.id),
+          eq(dailySubmissionFiles.uploadedBy, 'student')
+        )
+      )
       .returning({ id: dailySubmissionFiles.id });
     if (!removed.length) throw new DailySubmissionError('File not found', 404);
 
@@ -302,7 +320,7 @@ export class DailySubmissionService {
       const files = await db
         .select({ id: dailySubmissionFiles.id })
         .from(dailySubmissionFiles)
-        .where(eq(dailySubmissionFiles.dailySubmissionId, submission.id))
+        .where(and(eq(dailySubmissionFiles.dailySubmissionId, submission.id), eq(dailySubmissionFiles.uploadedBy, 'student')))
         .limit(1);
       if (!files.length) throw new DailySubmissionError('Attach at least one file to submit', 400);
     }
@@ -373,5 +391,29 @@ export class DailySubmissionService {
 
     const [fresh] = await db.select().from(dailySubmissions).where(eq(dailySubmissions.id, submissionId)).limit(1);
     return this.hydrateOne(fresh);
+  }
+
+  // Admin attaches a feedback/material file to a day. Works before the student has saved anything
+  // (ensureSubmission creates the day and seeds its topics, exactly like the student path), and
+  // still works after the day is submitted. No payment or "open day" checks apply to admins.
+  // studentId is used to confirm the plan really belongs to the student named in the URL.
+  async addAdminFile(studentId: string, learningPlanId: string, forDate: string, file: AddAdminFileBody) {
+    await this.getOwnedPlan(studentId, learningPlanId);
+
+    const submission = await this.ensureSubmission(learningPlanId, forDate);
+
+    await db.insert(dailySubmissionFiles).values({
+      dailySubmissionId: submission.id,
+      fileUrl: file.fileUrl,
+      fileKey: file.fileKey,
+      fileName: file.fileName,
+      contentType: file.contentType,
+      sizeBytes: file.sizeBytes,
+      uploadedBy: 'admin',
+    });
+
+    await db.update(dailySubmissions).set({ updatedAt: new Date() }).where(eq(dailySubmissions.id, submission.id));
+
+    return this.hydrateOne(submission);
   }
 }

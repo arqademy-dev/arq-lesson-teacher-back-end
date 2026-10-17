@@ -3,7 +3,12 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../config/db.js';
 import { students } from '../../db/schema.js';
 import { DailySubmissionService, DailySubmissionError } from './daily-submissions.service.js';
-import { listDailySubmissionsQuerySchema, type SaveNoteBody, type AddFilesBody } from './daily-submissions.validation.js';
+import {
+  listDailySubmissionsQuerySchema,
+  type SaveNoteBody,
+  type AddFilesBody,
+  type AddAdminFileBody,
+} from './daily-submissions.validation.js';
 
 const service = new DailySubmissionService();
 
@@ -88,6 +93,28 @@ export class DailySubmissionController {
       return res.json(await service.submit(studentId, req.params.learningPlanId, req.params.date));
     } catch (err) {
       return fail(err, res, 'Error submitting day');
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Admin (mounted on the admin router only)
+  // ------------------------------------------------------------
+
+  // POST /:studentId/daily-submissions/:learningPlanId/:date/admin-files
+  async addAdminFile(
+    req: Request<{ studentId: string; learningPlanId: string; date: string }, {}, AddAdminFileBody>,
+    res: Response
+  ) {
+    try {
+      const day = await service.addAdminFile(
+        req.params.studentId,
+        req.params.learningPlanId,
+        req.params.date,
+        req.body
+      );
+      return res.status(201).json(day);
+    } catch (err) {
+      return fail(err, res, 'Error attaching admin file');
     }
   }
 }

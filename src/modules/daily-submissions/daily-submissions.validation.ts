@@ -30,3 +30,13 @@ export const addFilesSchema = z.object({
     .max(10),
 });
 export type AddFilesBody = z.infer<typeof addFilesSchema>;
+
+// Admin attaches one file at a time to a day.
+export const addAdminFileSchema = z.object({
+  fileUrl: z.string().url(),
+  fileKey: z.string().max(500).optional(),
+  fileName: z.string().min(1).max(255),
+  contentType: z.string().max(100).optional(),
+  sizeBytes: z.number().int().positive().optional(),
+});
+export type AddAdminFileBody = z.infer<typeof addAdminFileSchema>;

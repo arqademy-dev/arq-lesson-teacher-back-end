@@ -19,6 +19,7 @@ export const topicStatusEnum = pgEnum('topic_status', ['pending', 'in_progress',
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'success', 'failed', 'refunded']);
 export const programmeStatusEnum = pgEnum('programme_status', ['draft', 'published', 'locked']);
 export const questionTypeEnum = pgEnum('question_type', ['multiple_choice', 'fill_blank']);
+export const dailySubmissionFileUploaderEnum = pgEnum('daily_submission_file_uploader', ['student', 'admin']);
 
 export const quizDayEnum = pgEnum('quiz_day', ['friday', 'saturday']);
 export const weeklyQuizStatusEnum = pgEnum('weekly_quiz_status', ['pending', 'submitted']);
@@ -399,6 +400,7 @@ export const dailySubmissionFiles = pgTable(
     fileKey: text('file_key'),
     fileName: varchar('file_name', { length: 255 }).notNull(),
     contentType: varchar('content_type', { length: 100 }),
+    uploadedBy: dailySubmissionFileUploaderEnum('uploaded_by').default('student').notNull(),
     sizeBytes: integer('size_bytes'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
