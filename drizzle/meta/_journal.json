@@ -120,6 +120,13 @@
       "when": 1790659817352,
       "tag": "0016_acoustic_joseph",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792298151628,
+      "tag": "0017_wealthy_iron_monger",
+      "breakpoints": true
     }
   ]
 }

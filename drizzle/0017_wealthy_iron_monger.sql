@@ -1,0 +1,2 @@
+CREATE TYPE "public"."daily_submission_file_uploader" AS ENUM('student', 'admin');--> statement-breakpoint
+ALTER TABLE "daily_submission_files" ADD COLUMN "uploaded_by" "daily_submission_file_uploader" DEFAULT 'student' NOT NULL;
