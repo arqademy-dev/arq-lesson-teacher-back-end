@@ -28,6 +28,7 @@ import {
 import { buildProgrammeScheduleEven, type QuizIsoDay } from '../../shared/programme-schedule.js';
 import { pickQuizQuestions } from '../../shared/quiz-question-picker.js'; // NEW
 import type { CreateProgrammePlanBody } from './programme-learning-plan.validation.js';
+import { notifyPlanAssigned } from '../resend-mails/index.js';
 
 export class ProgrammePlanError extends Error {
   status: 400 | 404;
@@ -215,6 +216,8 @@ export class ProgrammeLearningPlanService {
         status: 'pending',
       })
       .returning();
+
+     void notifyPlanAssigned(plan.id); 
 
     return { plan, paymentId: payment.id, amountNaira: activePrice.priceNaira };
   }

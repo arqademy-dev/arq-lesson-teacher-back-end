@@ -3,6 +3,7 @@ import { db } from '../../config/db.js';
 import { payments, pricingTiers, learningPlanTopics, students, learningPlans } from '../../db/schema.js';
 import { getPaymentProvider } from './providers/index.js';
 import { ProgrammePriceService } from '../programme-prices/programme-prices.service.js';
+import { notifyPaymentSuccess } from '../resend-mails/index.js';
 
 const programmePriceService = new ProgrammePriceService();
 
@@ -134,6 +135,11 @@ export class PaymentService {
       .set({ status: 'success', paidAt: new Date() })
       .where(eq(payments.id, id))
       .returning();
+
+    if (updated) {
+      void notifyPaymentSuccess(updated.id);
+    }
+    
     return updated || null;
   }
 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { StudentService } from './students.service.js';
+import { notifyStudentEnrolled } from '../resend-mails/index.js';
 import {
   listStudentsQuerySchema,
   type AdminEnrollStudentBody,
@@ -25,6 +26,8 @@ export class AdminStudentsController {
         body,
         body.educatorId ?? null
       );
+
+      void notifyStudentEnrolled(student.id, { temporaryPassword: generatedPassword });
 
       return res.status(201).json({
         message: 'Student enrolled successfully',
