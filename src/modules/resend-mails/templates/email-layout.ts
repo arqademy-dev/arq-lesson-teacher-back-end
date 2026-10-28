@@ -119,7 +119,7 @@ ${c.callout.lines
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
   <tr><td style="background:${C.navy};background-image:linear-gradient(135deg,#14294F 0%,#0D1B3D 55%,#070F26 100%);border-radius:14px 14px 0 0;padding:26px 24px 22px;">
-    <div style="font-family:${HEAD_FONT};font-size:28px;line-height:1;font-weight:700;letter-spacing:-.02em;color:#ffffff;">AR<span style="color:#12BFB4;">Qacademy</span></div>
+    <div style="font-family:${HEAD_FONT};font-size:28px;line-height:1;font-weight:700;letter-spacing:-.02em;color:#ffffff;">AR<span style="color:#12BFB4;">qademy</span></div>
     <div style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.32em;text-transform:uppercase;color:#12BFB4;">Powering Next Minds</div>
   </td></tr>
   <tr><td style="height:3px;background:${C.teal};font-size:0;line-height:0;">&nbsp;</td></tr>
