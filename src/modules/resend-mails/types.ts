@@ -49,3 +49,6 @@ export type PaymentSuccessData = {
   startDate: string | null;
   planUrl: string;
 };
+
+export type PasswordResetLinkData = { studentFirstName: string; resetUrl: string; expiresInMinutes: number };
+export type PasswordOtpData = { studentFirstName: string; code: string; expiresInMinutes: number };

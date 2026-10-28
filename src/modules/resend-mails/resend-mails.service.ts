@@ -1,5 +1,6 @@
 import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '../../config/db.js';
+import { studentPasswordOtpMail, studentPasswordResetLinkMail } from './student/password-mails.js';
 import {
   guardians,
   learningPlanTopics,
@@ -21,6 +22,8 @@ import type {
   EnrolmentData,
   GuardianTarget,
   OutgoingMail,
+  PasswordOtpData,
+  PasswordResetLinkData,
   PaymentSuccessData,
   PlanAssignedData,
 } from './types.js';
@@ -230,4 +233,13 @@ function compose(
     if (g !== sharedWithLogin) mails.push(guardianMail(g, false));
   }
   return mails;
+}
+
+// and add PasswordOtpData, PasswordResetLinkData to the existing types import
+
+export function sendPasswordResetLink(to: string, data: PasswordResetLinkData) {
+  return sendMails([studentPasswordResetLinkMail(to, data)]);
+}
+export function sendPasswordOtp(to: string, data: PasswordOtpData) {
+  return sendMails([studentPasswordOtpMail(to, data)]);
 }

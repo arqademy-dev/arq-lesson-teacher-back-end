@@ -12,11 +12,12 @@ export type EmailContent = {
   callout?: { title: string; lines: { label: string; value: string }[] };
   cta?: { label: string; url: string };
   footnote?: string;
+  code?: string; // for OTPs, shown in a monospace font
 };
 
 const C = {
   navy: '#0d1b3d',
-  teal: '#0a7a76',
+  teal: '#0E9B94',
   tealSoft: '#eef6f6',
   canvas: '#f4f6f9',
   ink: '#0d1b3d',
@@ -92,13 +93,17 @@ ${c.callout.lines
 
   const cta = c.cta
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;"><tr><td style="background:${C.teal};border-radius:10px;">
-<a href="${esc(c.cta.url)}" style="display:inline-block;padding:13px 26px;font-family:${FONT};font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">${esc(c.cta.label)}</a>
+<a href="${esc(c.cta.url)}" style="display:inline-block;padding:13px 26px;font-family:${FONT};font-size:14px;font-weight:700;color:#03211F;text-decoration:none;">${esc(c.cta.label)}</a>
 </td></tr></table>`
     : '';
 
   const footnote = c.footnote
     ? `<p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:${C.ink3};">${esc(c.footnote)}</p>`
     : '';
+
+    const code = c.code
+  ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 8px;"><tr><td align="center" style="padding:18px 12px;background:${C.tealSoft};border:1px dashed ${C.teal};border-radius:10px;font-family:Consolas,Menlo,monospace;font-size:32px;font-weight:700;letter-spacing:.35em;color:${C.ink};">${esc(c.code)}</td></tr></table>`
+  : '';
 
   const html = `<!doctype html>
 <html lang="en">
@@ -113,19 +118,14 @@ ${c.callout.lines
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.canvas};padding:24px 12px;">
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-  <tr><td style="background:${C.navy};border-radius:14px 14px 0 0;padding:20px 24px;">
-    <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-      <td width="36" height="36" align="center" style="width:36px;height:36px;background:#1a2b52;border-radius:10px;font-family:${HEAD_FONT};font-size:15px;font-weight:700;color:#2FD3C9;">N</td>
-      <td style="padding-left:12px;">
-        <div style="font-family:${HEAD_FONT};font-size:13px;font-weight:700;letter-spacing:.155em;color:#ffffff;">NEXT CLASS</div>
-        <div style="margin-top:3px;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#96a3c0;">Powered by Arqademy</div>
-      </td>
-    </tr></table>
+  <tr><td style="background:${C.navy};background-image:linear-gradient(135deg,#14294F 0%,#0D1B3D 55%,#070F26 100%);border-radius:14px 14px 0 0;padding:26px 24px 22px;">
+    <div style="font-family:${HEAD_FONT};font-size:28px;line-height:1;font-weight:700;letter-spacing:-.02em;color:#ffffff;">AR<span style="color:#12BFB4;">Qacademy</span></div>
+    <div style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.32em;text-transform:uppercase;color:#12BFB4;">Powering Next Minds</div>
   </td></tr>
   <tr><td style="height:3px;background:${C.teal};font-size:0;line-height:0;">&nbsp;</td></tr>
   <tr><td style="background:#ffffff;border:1px solid ${C.line};border-top:0;border-radius:0 0 14px 14px;padding:28px 24px;">
     <h1 style="margin:0 0 14px;font-family:${HEAD_FONT};font-size:21px;line-height:1.3;font-weight:700;color:${C.ink};">${esc(c.heading)}</h1>
-    ${paragraphs}${details}${callout}${cta}${footnote}
+    ${code}${paragraphs}${details}${callout}${cta}${footnote}
   </td></tr>
   <tr><td style="padding:16px 8px;text-align:center;font-size:11px;line-height:1.6;color:${C.ink3};">
     Arqademy &middot; Next Class<br>This is an automated message &mdash; please don&rsquo;t reply to it.

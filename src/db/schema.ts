@@ -409,6 +409,17 @@ export const dailySubmissionFiles = pgTable(
   })
 );
 
+export const passwordResets = pgTable('password_resets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  purpose: text('purpose').$type<'link' | 'otp'>().notNull(),
+  tokenHash: text('token_hash').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 
 // ==========================================
 // 7. DRIZZLE RELATIONAL TYPE MAPS

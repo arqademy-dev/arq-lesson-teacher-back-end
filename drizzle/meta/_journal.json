@@ -127,6 +127,13 @@
       "when": 1792298151628,
       "tag": "0017_wealthy_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793180445604,
+      "tag": "0018_early_genesis",
+      "breakpoints": true
     }
   ]
 }
